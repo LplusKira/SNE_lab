@@ -15,16 +15,17 @@
   ```
 
 # structure:
-  0. for a dataset X (its  corresponding dataloader dataloader_X)
-       load dataset X to some specific oracles
-  1. each oracle learns how to 'answere/predict'
-  2. load initial train data D0 to mf's model
-  3. TODO: the proactive learning's part follows ...
+  refer to 'Your Cart tells You: Inferring Demographic Attributes from Purchase Data'
 
 # data format:
   see u.template.BOI(BOI: bag of items) under data/; each line is:
   ```
   someUsrid_i|itemid_i0|itemid_i1|...|itemid_in
+  ```
+
+  see u.template.labels under data/; each line is:
+  ```
+  someUsrid_i|one-hot encoded feature_1 or empty|...|one-hot encoded feature_n
   ```
 
 # remark:
