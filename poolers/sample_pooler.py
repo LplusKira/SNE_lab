@@ -10,7 +10,7 @@ class sample_pooler:
     #         embeded features for item_in,
     #     ], ...
     # }
-    def pool_all(self, usr2itemsfeatures):
+    def pool_all_inits(self, usr2itemsfeatures):
         usr2representation = {}
         for usr in usr2itemsfeatures:
             usr2representation[usr] = self.pool(usr2itemsfeatures[usr])
@@ -21,3 +21,8 @@ class sample_pooler:
         counts = len(itemsfeatures)
         sum_all = reduce(lambda item_obj1, item_obj2: [x + y for x, y in zip(item_obj2['features'], item_obj2['features'])], itemsfeatures)
         return map(lambda v: v/counts, sum_all)
+
+    # return usr pooled features, by averaging
+    def pool_all(self, items, Vdict):
+        items_representation = [Vdict[itemId] for itemId in items]
+        usr_representation = reduce(lambda item_rep0, item_rep1: [x + y for x, y in zip(item_rep0, item_rep1)], items_representation) 

@@ -5,6 +5,8 @@ from config import USR_LABELS_FIELDS
 # assign prepared the usr-labels file to each usr
 # input file format (per line):
 #    usrid|one-hot encoded feature_1|...|one-hot encoded feature_n
+# TODO: modify this, only need list of nonzero col's ind 
+#       hard-code the part for each col's num of rows
 def get_labels(usr2labels_file):
     usr2labels = {}
     fd = open(usr2labels_file, 'r')
@@ -26,11 +28,15 @@ def get_labels(usr2labels_file):
 def load_data(usr2labels, usr2representation):
     X_train = []
     y_train = []
+    usrids_train = []
+    usrid2yInd = {} # take the indice of usr's y in y_train
     for usr in usr2representation:
         try:
+            usrids_train.append[usr]
             X_train.append(usr2representation[usr])
             y_train.append(usr2labels[usr])
+            usrid2yInd[usr] = len(y_train) - 1
         except: 
             print traceback.format_exc()
             raise
-    return X_train, y_train
+    return X_train, y_train, usrids_train
