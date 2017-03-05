@@ -1,18 +1,17 @@
 import dataloaders.movielens100k as dataloader_movielens100k
 import embedders.random_embedder as random_embedder
 import poolers.sample_pooler as sample_pooler
-from utils import get_labels, load_data
-from config import USR_TOTAL_LABELS_FIELDS, MAX_TRAIN_NUM
+from utils import load_data, getDistribution, negativeSample
+from config import USR_TOTAL_LABELS_FIELDS, MAX_TRAIN_NUM, LAMBDA
 
 import numpy as np
 np.random.seed(123)  # Reproducibility
 
 def checkConv(diff):
-    return diff < 0.01
+    return True #diff < 0.01
 
 # TODO: modify this: hard code num of fields + each field's size(category num)
 # ref: http://stackoverflow.com/questions/8386675/extracting-specific-columns-in-numpy-array
-fieldNumList = [3,4,5]
 def takeNonZero(W, y):
     # y = list of nonzeor col's indice
     return W[:,y]
@@ -25,105 +24,136 @@ def sumOverW(W, y):
 
 import math
 def sigmoid(x):
-  return 1 / (1 + math.exp(-x))
+    return 1 / (1 + math.exp(-x))
+
+# here gradsOfW is a numpy 2D array
+#      gradsOfV is {
+#  someitemInd: itsGrad
+#  ... }
+def updateByGradients(W, V, gradsOfW, gradsOfV):
+    W += gradsOfW
+    for itemInd in gradsOfV:
+        V[itemInd, :] += gradsOfV[itemInd]
+    print W, V
+   
+def main():
+    
+    ''' load each usr's BOI ''' 
+    # sample: 
+    #  ind2itemNum = {
+    #    0: 5566,
+    #    1: 87,
+    #    2: 2266,
+    #  }
+    #  usr2itemsIndx = {
+    #    0: [0,1],
+    #    1: [1,2],
+    #  }
+    # Rmk: the part for 'filtering rating >= 3' is done in file
+    dataloader = dataloader_movielens100k.dataloader_movielens100k()
+    usr2itemsIndx, ind2itemNum = dataloader.load('data/usrItemRating_1st10k')
+    print '[info] usr2itemsIndx loaded'
     
 
-def main():
-    # load data as {
-    #     usr_i(int): [ item_i0(int), item_i1(int), ... ]
-    #     ... 
-    # }
-    dataloader = dataloader_movielens100k.dataloader_movielens100k()
-    usr2items = dataloader.load('data/u.template.BOI')
+    ''' init V ''' 
+    numOfItems = len(ind2itemNum)
+    itemFieldsNum = 4
+    V = np.random.rand(numOfItems, itemFieldsNum)
+    print '[info] V loaded, V.shape == ', V.shape, '== (num items, itemFeatures length)'
 
-    # embed data as: {
-    #     usr_i: [{ 
-    #             item_id: item_i0,
-    #             features: embeded features for item_i0 (list of floats),
-    #         },{
-    #         ...}, {
-    #             item_id: item_in,
-    #             features: embeded features for item_in,
-    #         }
-    #     ], ...
-    # }
-    # init V_dict
-    # TODO: val of V_dict should be truned to numpu's array
-    embedder = random_embedder.random_embedder()
-    usr2itemsfeatures, V_dict = embedder.embed_all(usr2items)
 
-    # pool data as: {
-    #     usr_i: usr_i's representation list,
-    #     ....
+    ''' acquire usr2labels & usr2NonzeroCols ''' 
+    # sample:
+    # usr2labels = {
+    #   0: [0,0,1, 1,0],
+    #   1: [1,0,0, 0,1],
     # }
+    # usr2NonzeroCols = {
+    #   0: [2, 3],
+    #   1: [0, 4],
+    # }
+    usr2labels = dataloader.get_labels('data/usrAgeGenOccu')
+    usr2NonzeroCols = dataloader.get_nonZeroCols('data/usrAgeGenOccu')
+    print '[info] usr2labels, usr2NonzeroCols loaded'
+    
+
+    ''' acquire usr2NegativeSamples & usr2negsNonzeroCols ''' 
+    cdfByLabels, labelsList = getDistribution(usr2labels)
+    usr2NegativeSamples, usr2negsNonzeroCols = negativeSample(usr2labels, cdfByLabels, labelsList)
+    print '[info] usr2NegativeSamples, usr2negsNonzeroCols created'
+
+
+    ''' init W, pooler'''
+    # Warn: assume itemFieldsNum is the same after usr's representation's dimension
+    totalLabelsNum = dataloader.gettotalLabelsNum()
+    W = np.random.rand(itemFieldsNum, totalLabelsNum)
     pooler = sample_pooler.sample_pooler()
-    usr2representation = pooler.pool_all_inits(usr2itemsfeatures)
+    print '[info] W & pooler inited, W.shape == ', W.shape
 
-    # acquire usr labels as: {
-    #     usr_i: demographic labels (list of list(could be empty one)),
-    #     ...
-    # }
-    usr2labels = get_labels('data/u.template.labels')
 
-    # assemble y_train as: [
-    #     usr_i's labels,
-    #     ...
-    # ]; 
-    y_train, usrids, usrid2yInd = load_data(usr2labels, usr2representation)
-    y_train = np.array(y_train)
-    print '[info] y == ', y_train, y_train.shape
-
-    # init W
-    W = np.random.rand(??usr_repredim, USR_TOTAL_LABELS_FIELDS)
-    print '[info] W == ', W
-
-    # learning for W, V (V_dict)
+    ''' learning for W, V '''
     # Rmk, since no significant row over col (or the reverse); just 
     #   implement the most naive way
     # ref: http://stackoverflow.com/questions/17954990/performance-of-row-vs-column-operations-in-numpy
     conv = False
     t = 0
-    while not conv or t <= MAX_TRAIN_NUM:
-        t += 1
-        for usrid in usrids:
-            # pooling
-            usr_rep = pooler.pool_all(usr2items[usrid], V_dict)
+    while not conv and t <= MAX_TRAIN_NUM:
+        # TODO: if > thresh, then negsample
+        if False:
+            cdfByLabels, labelsList = getDistribution(usr2labels)
+            print 'cdfByLabels, labelsList', cdfByLabels, labelsList
+            usr2NegativeSamples, usr2negsNonzeroCols = negativeSample(usr2labels, cdfByLabels, labelsList)
 
-            # get y, Wc, sumedW, negCoef
-            y = y_train[ usrid2yInd[usr] ]
-            Wc = takeCompounded(W, y) 
-            sumedW = sumOverW(W, y)
-            grads = map(lambda y_neg: sigmoid(usr_rep.transpose().dot( sumOverW(W, y_neg) )))
+        t += 1
+        for usrid in usr2itemsIndx:
+            # pooling
+            usr_rep = pooler.pool_all(usr2itemsIndx[usrid], V)
+            print 'usr_rep', usr_rep
+
+            # get y, sumedW, negCoef
+            # Warn: assume all usrs have all labels
+            y = usr2labels[usrid]
+            y_nonzeroCols = usr2NonzeroCols[usrid]
+            sumedW = sumOverW(W, y_nonzeroCols)
+            y_negSamples = usr2NegativeSamples[usrid]
+            y_negsNonzeroCols = usr2negsNonzeroCols[usrid]
+            #print 'sumedW', sumedW
+            print usrid, y_negsNonzeroCols
+            grads = map(lambda y_negNonzeroCols: sigmoid(usr_rep.transpose().dot( sumOverW(W, y_negNonzeroCols) )), y_negsNonzeroCols)
             negCoef = reduce(lambda u, v: u+v, grads)
 
-            # TODO: implement negative sampling -- sampling thru emperialistic(train) data
-            # TODO: question: should neg sampling be done whenever training for each epoch?
-            ys_neg = negativeSampling()
-
+            # Warn: update W, V by usr, not by epoch 
             # get gradient of Wq (i.e. q-th column of W)
-            gradsOfW = []
-            for i in range(W.shape[1]):
-                # if yq one 
-                gradVect0 = 0.0
-                gradVect1 = 0.0
-                if i in y:
-                    gradVect0 = sigmoid(-1 * usr_rep.transpose().dot( sumedW )) * usr_rep
-                    gradVect1 = negCoef * (-1 * usr_rep)
+            gradsOfW = np.zeros(shape=W.shape)
+            for q in range(W.shape[1]):
+                # Warn: should be 2 * LAMBDA * ... (but just tune LAMBDA instead)
+                gradVect2 = LAMBDA * W[:,[q]]
+                WqGrads = gradVect2
+                
+                # if yq is 1 
+                if q in y_nonzeroCols:
+                    gradVect0 = (sigmoid(-1 * usr_rep.transpose().dot( sumedW )) * usr_rep).reshape(4,1)
+                    gradVect1 = (negCoef * (-1 * usr_rep.transpose())).reshape(4,1)
+                    WqGrads += (gradVect0 + gradVect1)
 
-                # TODO: decide when to update (over each t together?) 
-                # Rmk: should be 2 * LAMBDA * ... (but just tune LAMBDA instead)
-                gradVect2 = LAMBDA * W[:,[i]]
-                gradsOfW.append( gradVect0 + gradVect1 + gradVect2 )
+                gradsOfW[:,[q]] = WqGrads
 
-           # get gradient of Vp, p in X(i) 
-           # TODO: only implemnet average poooling for now
-           itemLensInverse = 1.0 / len(usr2items) 
-           for i in usr2items:
-               gradVect4 = sigmoid(-1 * usr_rep.transpose().dot() ) * itemLensInverse * sumedW
-               gradVect5 = negCoef * (-1 * itemLensInverse) * sumedW
+            # get gradient of Vitem, itemInd in X(usrid) 
+            # Warn: only implemnet average poooling for now
+            #   and the gradVect3, gradVect4 happen to hold the same values over all items in this case
+            gradsOfV = {}
+            itemLensInverse = 1.0 / len(usr2itemsIndx[usrid]) 
+            for itemInd in usr2itemsIndx[usrid]:
+                gradVect3 = sigmoid(-1 * usr_rep.transpose().dot(sumedW) ) * itemLensInverse * sumedW
+                gradVect4 = negCoef * (-1 * itemLensInverse) * sumedW
+                # Warn: should be 2 * LAMBDA * ... (but just tune LAMBDA instead)
+                gradVect5 = LAMBDA * V[itemInd,:]
+                gradsOfV[itemInd] = gradVect3 + gradVect4 + gradVect5
 
+            # update gradients to W, V
+            updateByGradients(W, V, gradsOfW, gradsOfV)
 
-        # TODO: diff should route over tests
+        # TODO: diff should route over trainData
         diff = 0.0
         conv = checkConv(diff)
 

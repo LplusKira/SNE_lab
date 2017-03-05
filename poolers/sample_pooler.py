@@ -1,5 +1,6 @@
 import sys
 import traceback
+import numpy as np
 sys.path.insert(0, '../')
 
 class sample_pooler:
@@ -22,7 +23,11 @@ class sample_pooler:
         sum_all = reduce(lambda item_obj1, item_obj2: [x + y for x, y in zip(item_obj2['features'], item_obj2['features'])], itemsfeatures)
         return map(lambda v: v/counts, sum_all)
 
-    # return usr pooled features, by averaging
-    def pool_all(self, items, Vdict):
-        items_representation = [Vdict[itemId] for itemId in items]
-        usr_representation = reduce(lambda item_rep0, item_rep1: [x + y for x, y in zip(item_rep0, item_rep1)], items_representation) 
+    # return usr pooled features (row vector), by averaging
+    def pool_all(self, itemsIndx, V):
+        #items_representation = [V[itemIndx] for itemIndx in itemsIndx]
+        #usr_representation = reduce(lambda item_rep0, item_rep1: [x + y for x, y in zip(item_rep0, item_rep1)], items_representation) 
+        #return usr_representation
+        items_representation = V[itemsIndx, :]
+        usr_representation = np.sum(items_representation, axis=0)
+        return usr_representation
