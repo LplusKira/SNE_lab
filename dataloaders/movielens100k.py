@@ -111,3 +111,4 @@ class dataloader_movielens100k:
 
     def gettotalLabelsNum(self):
         return 4 + 2 + 21
+

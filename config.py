@@ -9,4 +9,8 @@ AGES_BOUNDERIES = [17, 35, 65, 100]
 
 # for training
 MAX_TRAIN_NUM = int(os.environ.get('MAX_TRAIN_NUM')) if('MAX_TRAIN_NUM' in os.environ) else 10
-LAMBDA = float(os.environ.get('LAMBDA')) if('LAMBDA' in os.environ) else 0.01
+LEARNING_RATE = float(os.environ.get('LEARNING_RATE')) if('LEARNING_RATE' in os.environ) else 0.1
+LAMBDA = float(os.environ.get('LAMBDA')) if('LAMBDA' in os.environ) else 0.1
+
+# for debugging
+DEBUG = int(os.environ.get('DEBUG')) if('DEBUG' in os.environ) else 0

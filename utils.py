@@ -1,8 +1,13 @@
 import sys
 import traceback
 import random
-from config import USR_LABELS_FIELDS
+from config import USR_LABELS_FIELDS, DEBUG
 from bisect import bisect_left
+random.seed(87)
+
+def debug(msg, val):
+    if DEBUG > 0:
+        print '[info] ' + msg, val
 
 # assign prepared the usr-labels file to each usr
 # input file format (per line):
@@ -68,21 +73,21 @@ def getDistribution(usr2Labels):
 def keepNonzeroColInx(l):
     return [i for i, e in enumerate(l) if e != 0]
 
-# do k times sampling, return thenm
-def sample(cdfByLabels, labelsList, k=10):
+# do n times sampling, return thenm
+def sample(cdfByLabels, labelsList, n):
     negativeLabels = []
-    for i in range(k):
+    for i in range(n):
         # sample which 'labels'
         prob = random.random()
         ind = bisect_left(cdfByLabels, prob)
         negativeLabels.append(labelsList[ind])
     return negativeLabels
 
-def negativeSample(usr2labels, cdfByLabels, labelsList):
+def negativeSample(usr2labels, cdfByLabels, labelsList, k=10):
     usr2NegativeSamples = {}
     usr2negsNonzeroCols = {}
     for usr in usr2labels:
-        usr2NegativeSamples[usr] = sample(cdfByLabels, labelsList)
+        usr2NegativeSamples[usr] = sample(cdfByLabels, labelsList, n=k)
         usr2negsNonzeroCols[usr] = map(lambda x: keepNonzeroColInx(x), usr2NegativeSamples[usr])
     #print 'negativesamples, usr2negsNonzeroCols', usr2NegativeSamples, usr2negsNonzeroCols
     return usr2NegativeSamples, usr2negsNonzeroCols
