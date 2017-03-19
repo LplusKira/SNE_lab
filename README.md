@@ -3,35 +3,31 @@
   pip install -r requirements.txt
   ```
   ```
-  python `run.py`
-  ```
-
-# procedure of adding modules:
-  ```
-  0. add the module and its test in `test.py`
+  bash cmd.sh
   ```
   ```
-  1. add the required lib in `requirements.txt`
+  ## split your train file
+  ```
+  ```
+  python run.py data/yourTrainFile
   ```
 
 # structure:
   refer to 'Your Cart tells You: Inferring Demographic Attributes from Purchase Data'
 
 # data format:
-  see u.template.BOI(BOI: bag of items) under data/; each line is:
+  see data formulated after 'bash cmd.sh' under data/; each line is:
   ```
-  someUsrid_i|itemid_i0|itemid_i1|...|itemid_in
-  ```
-
-  see u.template.labels under data/; each line is:
-  ```
-  someUsrid_i|one-hot encoded feature_1 or empty|...|one-hot encoded feature_n
+  usrid	itemid	rating	somethingNotImportant
   ```
 
-# remark:
-  * for any modules written, add test to test/test.py and required test data under test/stubs/
-  * dont push data to this proj (test data excluded)
-  * since no ci now, just ensure that the test is ok before you push
+# procedure of adding modules <-- if you have time:
+  ```
+  0. add the module and its test in `test.py`
+  ```
+  ```
+  1. add the required lib in `requirements.txt`
+  ```
 
 # ref:
   0. the dataset is from http://files.grouplens.org/datasets/movielens/ml-100k.zip
