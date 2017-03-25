@@ -1,52 +1,13 @@
 import sys
 import traceback
 import random
-from config import USR_LABELS_FIELDS, DEBUG
+from config import DEBUG
 from bisect import bisect_left
 random.seed(87)
 
 def debug(msg, val):
     if DEBUG > 0:
         print '[info] ' + msg, val
-
-# assign prepared the usr-labels file to each usr
-# input file format (per line):
-#    usrid|one-hot encoded feature_1|...|one-hot encoded feature_n
-# TODO: modify this, only need list of nonzero col's ind 
-#       hard-code the part for each col's num of rows
-def get_labels(usr2labels_file):
-    usr2labels = {}
-    fd = open(usr2labels_file, 'r')
-    for line in fd:
-        try:
-            line = line.strip().split('|')
-            usr = int(line[0])
-            tmplabels = []
-            for ind in USR_LABELS_FIELDS:
-                lablels = map(lambda v: int(v), line[ind].split(',')) if len(line[ind]) > 0 else []
-                tmplabels.append(lablels)
-            usr2labels[usr] = tmplabels
-        except: 
-            print traceback.format_exc()
-            raise
-    fd.close()
-    return usr2labels
-
-def load_data(usr2labels, usr2representation):
-    X_train = []
-    y_train = []
-    usrids_train = []
-    usrid2yInd = {} # take the indice of usr's y in y_train
-    for usr in usr2representation:
-        try:
-            usrids_train.append[usr]
-            X_train.append(usr2representation[usr])
-            y_train.append(usr2labels[usr])
-            usrid2yInd[usr] = len(y_train) - 1
-        except: 
-            print traceback.format_exc()
-            raise
-    return X_train, y_train, usrids_train
 
 # return cdf (represented by cdfByLabels, labelsList)
 # e.g. cdfByLabels = [0.3, 0.7]

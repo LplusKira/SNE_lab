@@ -60,7 +60,7 @@ class dataloader_movielens100k:
                 line = line.strip().split('|')
                 usr = int(line[0])
 
-                # get labels for usr
+                # get labels for age
                 age = int(line[1])
                 ageInd = bisect_left(AGES_BOUNDERIES, age)
                 ageLabels = self.ageindxLabelsDict[ageInd]

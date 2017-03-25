@@ -1,3 +1,6 @@
+# warn:
+  you should exactly see no warning/err
+  (if you do, it's plaussibly the weights somehow overlow)
 # how to run:
   ```
   pip install -r requirements.txt
@@ -9,7 +12,7 @@
   ## split your train file
   ```
   ```
-  python run.py data/yourTrainFile
+  ITEM_FIELDS_NUM=4 MAX_TRAIN_NUM=100 LEARNING_RATE=0.0002 MOMENTUM=2.0 LAMBDA=1 python run.py data/yourTrainFile
   ```
 
 # structure:
