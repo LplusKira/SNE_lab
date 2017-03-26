@@ -2,3 +2,4 @@
 *.swp
 data/ml-100k
 qwop
+report/*

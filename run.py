@@ -265,8 +265,9 @@ def main(argv):
     #lastSampledLoss = 9999999
     incrInd = False
     while microF1Valid < 0.5 and t <= MAX_TRAIN_NUM:
-        # TODO: if < some thresh, then negsample
-        if t % 100 == 99:
+        # if > some run, then negsample
+        if t >= 99 and t == MAX_TRAIN_NUM * 0.9:
+            print '[info] resample usr negative samples'
             cdfByLabels, labelsList = getDistribution(usr2labels)
             print 'cdfByLabels, labelsList', cdfByLabels, labelsList
             usr2NegativeSamples, usr2negsNonzeroCols = negativeSample(usr2labels, cdfByLabels, labelsList, k=2)
