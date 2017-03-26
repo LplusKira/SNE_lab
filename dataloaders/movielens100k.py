@@ -13,16 +13,16 @@ class dataloader_movielens100k:
             3: [0,0,0,1],
         }
 
+        self.genderLabelDict = {
+          'M': [1,0],
+          'F': [0,1],
+        }
+
         self.occupationLabelsDict = {}
         for i in range(21):
             tmp = [0] * 21
             tmp[i] = 1
             self.occupationLabelsDict[i+1] = tmp
-
-        self.genderLabelDict = {
-          'M': [1,0],
-          'F': [0,1],
-        }
 
     def load(self, file_path):
         usr2itemsIndx = {}

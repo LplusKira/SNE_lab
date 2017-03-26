@@ -1,0 +1,7 @@
+run.py:305: RuntimeWarning: overflow encountered in multiply
+  gradVect0 = (-1) * (sumedW_y * usr_rep).reshape(ITEM_FIELDS_NUM,1)
+run.py:292: RuntimeWarning: invalid value encountered in multiply
+  sigmoidedSumedW += sigmoid_neg * sumedW_negs[ind]
+run.py:35: RuntimeWarning: invalid value encountered in subtract
+  W -= scale * LEARNING_RATE * gradsOfW
+     3431.71 real      3150.25 user        25.40 sys
