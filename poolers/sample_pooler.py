@@ -29,5 +29,5 @@ class sample_pooler:
         #usr_representation = reduce(lambda item_rep0, item_rep1: [x + y for x, y in zip(item_rep0, item_rep1)], items_representation) 
         #return usr_representation
         items_representation = V[itemsIndx, :]
-        usr_representation = np.sum(items_representation, axis=0)
+        usr_representation = np.sum(items_representation, axis=0) * (1.0 / len(itemsIndx))
         return usr_representation

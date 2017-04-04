@@ -24,17 +24,18 @@ def sigmoid(x):
         return 1 / (1 + math.exp(-x))
     except:
         # the only exception: x << 0 => exp(-x) explodes
-        return 0.001
+        return 0.000001
 
 # here gradsOfW is a numpy 2D array
 #      gradsOfV is {
-#  someitemInd: itsGrad
-#  ... }
+#          someitemInd: itsGrad
+#      ... }
 def updateByGradients(W, V, gradsOfW, gradsOfV, incrInd):
     scale = MOMENTUM if incrInd else 1/MOMENTUM
     W -= scale * LEARNING_RATE * gradsOfW
     for itemInd in gradsOfV:
         V[itemInd, :] -= scale * LEARNING_RATE * gradsOfV[itemInd]
+    return W, V
 
 def predictLabels(usr_rep, W):
     # XXX, its hard-coded and inefficient now
@@ -47,6 +48,7 @@ def predictLabels(usr_rep, W):
                 sumedW = sumOverW(W, y_nonzeroCols_sample)
                 score = usr_rep.transpose().dot( sumedW )
                 if score >= bestScore:
+                    bestScore = score
                     bestCols = y_nonzeroCols_sample
     return bestCols
 
@@ -90,7 +92,7 @@ def getClasses(trueCols, predictedCols):
 # ref(how to cal microf1): http://rushdishams.blogspot.tw/2011/08/micro-and-macro-average-of-precision.html
 # get micro f1 by age/gender/occupation
 def getMicroF1ByCol(W, V, usr2itemsIndx, usr2NonzeroCols, pooler):
-    # XXX hard coded: age/occupation/gender
+    # XXX hard coded: age/gender/occupation
     tpList = [0.0] * USR_TOTAL_LABELS_FIELDS
     fpList = [0.0] * USR_TOTAL_LABELS_FIELDS
     tnList = [0.0] * USR_TOTAL_LABELS_FIELDS
@@ -108,7 +110,7 @@ def getMicroF1ByCol(W, V, usr2itemsIndx, usr2NonzeroCols, pooler):
             tpList[col] += 1.0
         for col in classDict[1]:
             fpList[col] += 1.0
-        for col in classDict[1]:
+        for col in classDict[2]:
             tnList[col] += 1.0
     
     # cal micro precision & recall    
@@ -121,6 +123,73 @@ def getMicroF1ByCol(W, V, usr2itemsIndx, usr2NonzeroCols, pooler):
     # cal micro F1
     microF1        = 2 * microPrecision * microRecall / (microPrecision + microRecall) if(summedTp > 0) else 0.0
     return microF1
+
+# get one error
+#   one error = sum( has one class hits or not ) / dataPointsNum
+def getOneError(W, V, usr2itemsIndx, usr2NonzeroCols, pooler):
+    errCnt = len(usr2itemsIndx)
+    usrCnt = len(usr2itemsIndx)
+    for usrid in usr2itemsIndx:
+        usr_rep = pooler.pool_all(usr2itemsIndx[usrid], V)
+        y_nonzeroCols = usr2NonzeroCols[usrid]
+
+        # predict the most possible cols' combination
+        bestCols = predictLabels(usr_rep, W)
+        for ind, col in enumerate(bestCols):
+            if col == y_nonzeroCols[ind]:
+                # if one class(col) hits, then no err for this usr
+                errCnt -= 1
+                break
+    return errCnt / float(usrCnt)
+                
+# get RL (ranking loss)
+#   it's .. ??? 
+# TODO: may modify the way this calculates .. inefficient now
+def getRL(W, V, usr2itemsIndx, usr2NonzeroCols, pooler):
+    totalLoss = 0.0
+    for usrid in usr2itemsIndx:
+        print usrid
+        usr_rep = pooler.pool_all(usr2itemsIndx[usrid], V)
+        y_nonzeroCols = usr2NonzeroCols[usrid]
+        y_zeroCols = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26]
+        col2Val = map(lambda v: [v, 0], y_zeroCols)
+        for v in y_nonzeroCols:
+            y_zeroCols.remove(v)
+
+        # predict the most possible cols' combination + add to sort list
+        bestCols = predictLabels(usr_rep, W)
+        for v in bestCols:
+            col2Val[v][1] = 1
+        col2Val.sort(key=lambda v: v[1], reverse=True)
+        col2Order = {}
+        for ind, v in enumerate(col2Val):
+            col2Order[v[0]] = ind
+
+        # check for every true's '0','1''s indx pair
+        # if the ordery of predicted is reverse => err ++
+        errCnt = 0
+        for col1 in y_zeroCols:
+            for col2 in y_nonzeroCols:
+                if col2Order[col1] < col2Order[col2]:
+                    errCnt += 1
+        lossPerUsr = errCnt / 72.0 # <-- hard-coded here
+        totalLoss += lossPerUsr
+
+    return totalLoss / len(usr2itemsIndx)
+        
+
+# just print the result
+def printTruePredicted(W, V, usr2itemsIndx, usr2NonzeroCols, pooler):
+    print '[info]: usrid, actual, predicted'
+    for usrid in usr2itemsIndx:
+        usr_rep = pooler.pool_all(usr2itemsIndx[usrid], V)
+        y_nonzeroCols = usr2NonzeroCols[usrid]
+
+        # predict the most possible cols' combination
+        bestCols = predictLabels(usr_rep, W)
+
+        print usrid, y_nonzeroCols, bestCols
+
 
 # pick the 1st 10% as valid data
 def splitTrainTest(usr2itemsIndx):
@@ -137,7 +206,7 @@ def splitTrainTest(usr2itemsIndx):
 
     return usr2itemsIndx_train, usr2itemsIndx_valid
 
-# formulate loss + print
+# formulate avg loss
 def getAvgLoss(W, V, usr2NonzeroCols, usr2negsNonzeroCols, usr2itemsIndx, pooler):
     loss = 0.0
     cnt = 0
@@ -193,6 +262,60 @@ def getSampledLoss(W, V, usr2NonzeroCols, usr2negsNonzeroCols, usr2itemsIndx, po
 
         loss += usrloss
     return loss
+
+# return gradsOfW w.r.t. the user
+''' y_nonzeroCols:    usr's y's nonzero cols ''' 
+''' sigmoid_y:        sigmoid(-v * summedW_y ) ''' 
+''' usr_rep:          usr's representation vector ''' 
+''' sigmoids_negs:    [ sigmoid(-v * summedW_neg ) ] '''
+''' y_negsNonzeroCols:[ nonzeroCols ] ''' 
+def getGradsOfW(W, y_nonzeroCols, sigmoid_y, usr_rep, sigmoids_negs, y_negsNonzeroCols):
+    gradsOfW = np.zeros(shape=W.shape)
+
+    # get each Wq's gradient
+    for q in range(W.shape[1]):
+        gradVect2 = 2 * LAMBDA * W[:,[q]]
+        WqGrads   = gradVect2
+        
+        # if yq is 1 
+        gradVect0 = np.zeros( (ITEM_FIELDS_NUM,1) )
+        if q in y_nonzeroCols:
+            gradVect0 = (-1) * (sigmoid_y * usr_rep).reshape(ITEM_FIELDS_NUM,1)
+            WqGrads += gradVect0                     # <----- indep of which q ( if in y's cols )
+
+        # iterate over negs
+        negCoef = 0.0
+        for ind, y_negNonzeroCols in enumerate(y_negsNonzeroCols):
+            if q in y_negNonzeroCols:
+                negCoef += sigmoids_negs[ind]
+        gradVect1 = (-1) * (negCoef * usr_rep.transpose()).reshape(ITEM_FIELDS_NUM,1)
+        WqGrads += gradVect1                         # <----- indep of which q ( if in y_neg's cols )
+
+        gradsOfW[:,[q]] = WqGrads
+        #    debug('q', q)
+        #    debug('v0', gradVect0)
+        #    debug('v1', gradVect1)
+        #    debug('v2', gradVect2)
+        #    debug('wqgrads', WqGrads)
+    #debug('gradofw', gradsOfW)
+    return gradsOfW
+
+# return gradsOfV w.r.t. the user
+def getGradsOfV(V, itemsIndx, sumedW_y, sigmoid_y, sigmoidedSumedW):
+    gradsOfV = {}
+    itemLens = len(itemsIndx) 
+    for itemInd in itemsIndx:
+        gradVect3 = (-1) * sigmoid_y * (1.0 / itemLens) * sumedW_y                   # <--- indep of which item
+        gradVect4 = (-1) * (sigmoidedSumedW * (1.0 / itemLens)).transpose()          # <--- indep of which item
+        gradVect5 = 2 * LAMBDA * V[itemInd,:]
+        gradsOfV[itemInd] = (gradVect3 + gradVect4 + gradVect5).reshape(ITEM_FIELDS_NUM,)         # <-- reshape to vect (not 2D array)
+
+        #    debug('v3', gradVect3)
+        #    debug('v4', gradVect4)
+        #    debug('v5', gradVect5)
+        #    debug('gradsofv', gradsOfV[itemInd])
+    #debug('gradsofv', gradsOfV)
+    return gradsOfV
    
 def main(argv):
     if not len(argv) == 1:
@@ -261,27 +384,28 @@ def main(argv):
     #   implement the most naive way
     # ref: http://stackoverflow.com/questions/17954990/performance-of-row-vs-column-operations-in-numpy
     microF1Valid = 0.0 # <--- btw [0,1]; bigger => higer precision, higer recall
+    prevAvgLoss = 999999.0
+    lossDiff = 999999.0
     t = 0
-    #lastSampledLoss = 9999999
     incrInd = False
     while microF1Valid < 0.5 and t <= MAX_TRAIN_NUM:
-        # if > some run, then negsample
-        if t >= 99 and t == MAX_TRAIN_NUM * 0.9:
+        # if > some run OR |loss' diff| small, then negsample
+        if (t >= 99 and t == MAX_TRAIN_NUM * 0.9) or (math.fabs(lossDiff) < 10):
             print '[info] resample usr negative samples'
             cdfByLabels, labelsList = getDistribution(usr2labels)
-            print 'cdfByLabels, labelsList', cdfByLabels, labelsList
+            #print 'cdfByLabels, labelsList', cdfByLabels, labelsList
             usr2NegativeSamples, usr2negsNonzeroCols = negativeSample(usr2labels, cdfByLabels, labelsList, k=2)
 
         t += 1
         for usrid in usr2itemsIndx:
             # pooling
             usr_rep = pooler.pool_all(usr2itemsIndx[usrid], V)
-            debug('usr_rep', usr_rep)
 
             # get y, sumedW(for y AND negs), sigmoids(for y AND negs)
             # Warn: assume all usrs have all labels
             y = usr2labels[usrid]
             y_nonzeroCols = usr2NonzeroCols[usrid]
+            itemsIndx = usr2itemsIndx[usrid]
             sumedW_y = sumOverW(W, y_nonzeroCols)
             sigmoid_y = sigmoid((-1) * usr_rep.transpose().dot(sumedW_y))
             y_negsNonzeroCols = usr2negsNonzeroCols[usrid]
@@ -293,82 +417,47 @@ def main(argv):
 
             # Warn: update W by usr, not by epoch 
             # get gradient of Wq (i.e. q-th column of W)
-            gradsOfW = np.zeros(shape=W.shape)
-            for q in range(W.shape[1]):
-                # Warn: should be 2 * LAMBDA * ... (but just tune LAMBDA instead)
-                gradVect2 = LAMBDA * W[:,[q]]
-                WqGrads = gradVect2
-                
-                # if yq is 1 
-                gradVect0 = np.zeros((ITEM_FIELDS_NUM,1))
-                if q in y_nonzeroCols:
-                    gradVect0 = (-1) * (sumedW_y * usr_rep).reshape(ITEM_FIELDS_NUM,1)
-                    WqGrads += gradVect0                     # <----- indep of which q ( if in y's cols )
-
-                # iterate over negs
-                negCoef = 0.0
-                for ind, y_negNonzeroCols in enumerate(y_negsNonzeroCols):
-                    if q in y_negNonzeroCols:
-                        negCoef += sigmoids_negs[ind]
-                gradVect1 = (-1) * (negCoef * usr_rep.transpose()).reshape(ITEM_FIELDS_NUM,1)
-                WqGrads += gradVect1                         # <----- indep of which q ( if in y_neg's cols )
-
-                gradsOfW[:,[q]] = WqGrads
-
-                #    debug('q', q)
-                #    debug('v0', gradVect0)
-                #    debug('v1', gradVect1)
-                #    debug('v2', gradVect2)
-                #    debug('wqgrads', WqGrads)
-
-            #debug('gradofw', gradsOfW)
-
+            gradsOfW = getGradsOfW(W, y_nonzeroCols, sumedW_y, usr_rep, sigmoids_negs, y_negsNonzeroCols)
+            
             # Warn: update V by usr, not by epoch 
             # get gradient of Vitem, itemInd in X(usrid) 
             # Warn: only implemnet average poooling for now
             #   and the gradVect3, gradVect4 happen to hold the same values over all items in this case
-            gradsOfV = {}
-            itemLensInverse = 1.0 / len(usr2itemsIndx[usrid]) 
-            for itemInd in usr2itemsIndx[usrid]:
-                gradVect3 = (-1) * sigmoid_y * itemLensInverse * sumedW_y                   # <--- indep of which item
-                gradVect4 = (-1) * (sigmoidedSumedW * itemLensInverse).transpose()          # <--- indep of which item
-                # Warn: should be 2 * LAMBDA * ... (but just tune LAMBDA instead)
-                gradVect5 = LAMBDA * V[itemInd,:]
-                gradsOfV[itemInd] = (gradVect3 + gradVect4 + gradVect5).reshape(ITEM_FIELDS_NUM,)         # <-- reshape to vect (not 2D array)
-
-                #    debug('v3', gradVect3)
-                #    debug('v4', gradVect4)
-                #    debug('v5', gradVect5)
-                #    debug('gradsofv', gradsOfV[itemInd])
-            #debug('gradsofv', gradsOfV)
+            gradsOfV = getGradsOfV(V, itemsIndx, sumedW_y, sigmoid_y, sigmoidedSumedW)
 
             # update gradients to W, V
-            #debug('Gw', gradsOfW)
-            #debug('Gv', gradsOfV)
-            print '[info] l2 norm of gradsOfW == ', np.linalg.norm(gradsOfW)
-            updateByGradients(W, V, gradsOfW, gradsOfV, incrInd)
+            W, V = updateByGradients(W, V, gradsOfW, gradsOfV, incrInd)
 
-            # check sampled loss val 
-            #                                  vvv replace labels  vvv replace negs labesl  vvv to make usr representation vvv 
-            #sampledLoss = getSampledLoss(W, V, usr2NonzeroCols,    usr2negsNonzeroCols,     usr2itemsIndx,              pooler)
-            #incrInd = True if(sampledLoss < lastSampledLoss) else False
-            #print '[info]: sampledLoss == ', sampledLoss, 'lastSampledLoss ==', lastSampledLoss, 'incrInd == ', incrInd
-            #lastSampledLoss = sampledLoss
+            if usrid % 20 == 0:
+                print '[info] usr', usrid, 'l2 norm of gradsOfW == ', np.linalg.norm(gradsOfW)
 
         if t % 5 == 0:
             avgloss = getAvgLoss(W, V, usr2NonzeroCols, usr2negsNonzeroCols, usr2itemsIndx, pooler)
+            lossDiff = avgloss - prevAvgLoss 
+            prevAvgLoss = avgloss
             print '[info] at run == ', t
             print '[info] avgloss(only for train -- since this requires samples) == ', avgloss
             print '[info] W[:,0] == ', W[:, 0]
             print '[info] V == ', V
 
-        # check performance by train/valid's rmse ( <-- XXX should be replaced by other matrix )
+        # check performance by microF1, oneError
         microF1Train = getMicroF1ByCol(W, V, usr2itemsIndx, usr2NonzeroCols, pooler)
         microF1Valid = getMicroF1ByCol(W, V, usr2itemsIndx_valid, usr2NonzeroCols, pooler)
-        #rmse = getRMSE(W, V, usr2itemsIndx, usr2NonzeroCols, pooler)
-        #rmseValid = getRMSE(W, V, usr2itemsIndx_valid, usr2NonzeroCols, pooler)
+        oneErrorTrain = getOneError(W, V, usr2itemsIndx, usr2NonzeroCols, pooler)
+        oneErrorValid = getOneError(W, V, usr2itemsIndx_valid, usr2NonzeroCols, pooler)
+        RLTrain = getRL(W, V, usr2itemsIndx, usr2NonzeroCols, pooler)
+        RLValid = getRL(W, V, usr2itemsIndx_valid, usr2NonzeroCols, pooler)
         print '[info]: train data microF1 == ', microF1Train
         print '[info]: valid data microF1 == ', microF1Valid
+        print '[info]: train data oneError == ', oneErrorTrain
+        print '[info]: valid data oneError == ', oneErrorValid
+        print '[info]: train data RL == ', RLTrain
+        print '[info]: valid data RL == ', RLValid
+
+    print '[info]: for traindata ... '
+    printTruePredicted(W, V, usr2itemsIndx, usr2NonzeroCols, pooler)
+    print '[info]: for validdata ... '
+    printTruePredicted(W, V, usr2itemsIndx_valid, usr2NonzeroCols, pooler)
 
 if __name__ == '__main__':
     main(sys.argv[1:])
