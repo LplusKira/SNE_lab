@@ -1,9 +1,9 @@
 import dataloaders.movielens100k as dataloader_movielens100k
 import poolers.sample_pooler as sample_pooler
 from utils import getDistribution, negativeSample, debug
-from config import USR_TOTAL_LABELS_FIELDS, ITEM_FIELDS_NUM, MAX_TRAIN_NUM, LAMBDA, LEARNING_RATE, MOMENTUM
+from config import USR_TOTAL_LABELS_FIELDS, ITEM_FIELDS_NUM, MAX_TRAIN_NUM, LAMBDA, LEARNING_RATE, MOMENTUM, NEG_SAMPLE_NUM
 
-import math, random, sys
+import math, random, sys, traceback
 import numpy as np
 np.random.seed(0)  # Reproducibility
 
@@ -20,11 +20,14 @@ def sumOverW(W, y):
     return Wn.sum(axis=1)   
 
 def sigmoid(x):
+    #return 1 / (1 + math.exp(-x))
     try:
         return 1 / (1 + math.exp(-x))
     except:
         # the only exception: x << 0 => exp(-x) explodes
-        return 0.000001
+        return 0.001
+        #print traceback.format_exc()
+        #sys.exit(1)
 
 # here gradsOfW is a numpy 2D array
 #      gradsOfV is {
@@ -148,7 +151,6 @@ def getOneError(W, V, usr2itemsIndx, usr2NonzeroCols, pooler):
 def getRL(W, V, usr2itemsIndx, usr2NonzeroCols, pooler):
     totalLoss = 0.0
     for usrid in usr2itemsIndx:
-        print usrid
         usr_rep = pooler.pool_all(usr2itemsIndx[usrid], V)
         y_nonzeroCols = usr2NonzeroCols[usrid]
         y_zeroCols = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26]
@@ -267,7 +269,7 @@ def getSampledLoss(W, V, usr2NonzeroCols, usr2negsNonzeroCols, usr2itemsIndx, po
 ''' y_nonzeroCols:    usr's y's nonzero cols ''' 
 ''' sigmoid_y:        sigmoid(-v * summedW_y ) ''' 
 ''' usr_rep:          usr's representation vector ''' 
-''' sigmoids_negs:    [ sigmoid(-v * summedW_neg ) ] '''
+''' sigmoids_negs:    [ sigmoid( v * summedW_neg ) ] '''
 ''' y_negsNonzeroCols:[ nonzeroCols ] ''' 
 def getGradsOfW(W, y_nonzeroCols, sigmoid_y, usr_rep, sigmoids_negs, y_negsNonzeroCols):
     gradsOfW = np.zeros(shape=W.shape)
@@ -288,16 +290,10 @@ def getGradsOfW(W, y_nonzeroCols, sigmoid_y, usr_rep, sigmoids_negs, y_negsNonze
         for ind, y_negNonzeroCols in enumerate(y_negsNonzeroCols):
             if q in y_negNonzeroCols:
                 negCoef += sigmoids_negs[ind]
-        gradVect1 = (-1) * (negCoef * usr_rep.transpose()).reshape(ITEM_FIELDS_NUM,1)
+        gradVect1 = (negCoef * usr_rep.transpose()).reshape(ITEM_FIELDS_NUM,1)
         WqGrads += gradVect1                         # <----- indep of which q ( if in y_neg's cols )
 
         gradsOfW[:,[q]] = WqGrads
-        #    debug('q', q)
-        #    debug('v0', gradVect0)
-        #    debug('v1', gradVect1)
-        #    debug('v2', gradVect2)
-        #    debug('wqgrads', WqGrads)
-    #debug('gradofw', gradsOfW)
     return gradsOfW
 
 # return gradsOfV w.r.t. the user
@@ -305,17 +301,26 @@ def getGradsOfV(V, itemsIndx, sumedW_y, sigmoid_y, sigmoidedSumedW):
     gradsOfV = {}
     itemLens = len(itemsIndx) 
     for itemInd in itemsIndx:
-        gradVect3 = (-1) * sigmoid_y * (1.0 / itemLens) * sumedW_y                   # <--- indep of which item
-        gradVect4 = (-1) * (sigmoidedSumedW * (1.0 / itemLens)).transpose()          # <--- indep of which item
+        gradVect3 = (-1) * (1.0 / itemLens) * sigmoid_y * sumedW_y                   # <--- indep of which item
+        gradVect4 = ((1.0 / itemLens) * sigmoidedSumedW).transpose()                 # <--- indep of which item
         gradVect5 = 2 * LAMBDA * V[itemInd,:]
         gradsOfV[itemInd] = (gradVect3 + gradVect4 + gradVect5).reshape(ITEM_FIELDS_NUM,)         # <-- reshape to vect (not 2D array)
 
-        #    debug('v3', gradVect3)
-        #    debug('v4', gradVect4)
-        #    debug('v5', gradVect5)
-        #    debug('gradsofv', gradsOfV[itemInd])
-    #debug('gradsofv', gradsOfV)
     return gradsOfV
+
+def getTerms(usrid, usr2labels, usr2NonzeroCols, usr2itemsIndx, W, usr_rep, usr2negsNonzeroCols):
+    y                 = usr2labels[usrid]
+    y_nonzeroCols     = usr2NonzeroCols[usrid]
+    itemsIndx         = usr2itemsIndx[usrid]
+    sumedW_y          = sumOverW(W, y_nonzeroCols)
+    sigmoid_y         = sigmoid((-1) * usr_rep.transpose().dot(sumedW_y)) # equivalent to 1 - sigmoid(...)
+    y_negsNonzeroCols = usr2negsNonzeroCols[usrid]
+    sumedW_negs       = map(lambda y_negNonzeroCols: sumOverW(W, y_negNonzeroCols).reshape(ITEM_FIELDS_NUM,1), y_negsNonzeroCols)
+    sigmoids_negs     = map(lambda sumedW_neg: sigmoid(usr_rep.transpose().dot(sumedW_neg)), sumedW_negs)
+    sigmoidedSumedW   = np.zeros((ITEM_FIELDS_NUM,1))
+    for ind, sigmoid_neg in enumerate(sigmoids_negs):
+        sigmoidedSumedW += sigmoid_neg * sumedW_negs[ind]
+    return y, y_nonzeroCols, itemsIndx, sumedW_y, sigmoid_y, y_negsNonzeroCols, sumedW_negs, sigmoids_negs, sigmoidedSumedW
    
 def main(argv):
     if not len(argv) == 1:
@@ -336,6 +341,7 @@ def main(argv):
     # Rmk: the part for 'filtering rating >= 3' is done in file
     dataloader = dataloader_movielens100k.dataloader_movielens100k()
     usr2itemsIndx, ind2itemNum = dataloader.load(argv[0])
+    usrs = map(lambda usr: usr, usr2itemsIndx)
     usr2itemsIndx, usr2itemsIndx_valid = splitTrainTest(usr2itemsIndx)
     print '[info] usr2itemsIndx, usr2itemsIndx_valid loaded'
     print '[info] usrs in train: ', len(usr2itemsIndx)
@@ -352,14 +358,14 @@ def main(argv):
     #   0: [2, 3],
     #   1: [0, 4],
     # }
-    usr2labels = dataloader.get_labels('data/usrAgeGenOccu')
+    usr2labels = dataloader.get_labels('data/usrAgeGenOccu', usrs)
     usr2NonzeroCols = dataloader.get_nonZeroCols('data/usrAgeGenOccu')
     print '[info] usr2labels, usr2NonzeroCols loaded'
     
 
     ''' acquire (k times) usr2NegativeSamples & usr2negsNonzeroCols ''' 
     cdfByLabels, labelsList = getDistribution(usr2labels)
-    usr2NegativeSamples, usr2negsNonzeroCols = negativeSample(usr2labels, cdfByLabels, labelsList, k=2)
+    usr2NegativeSamples, usr2negsNonzeroCols = negativeSample(usr2labels, cdfByLabels, labelsList, k=NEG_SAMPLE_NUM)
     print '[info] usr2NegativeSamples, usr2negsNonzeroCols created'
 
 
@@ -384,40 +390,38 @@ def main(argv):
     #   implement the most naive way
     # ref: http://stackoverflow.com/questions/17954990/performance-of-row-vs-column-operations-in-numpy
     microF1Valid = 0.0 # <--- btw [0,1]; bigger => higer precision, higer recall
-    prevAvgLoss = 999999.0
-    lossDiff = 999999.0
-    t = 0
-    incrInd = False
+    prevAvgLoss  = float('inf')
+    lossDiff     = float('inf')
+    t            = 0
+    incrInd      = False
+    #while t <= MAX_TRAIN_NUM:
     while microF1Valid < 0.5 and t <= MAX_TRAIN_NUM:
-        # if > some run OR |loss' diff| small, then negsample
-        if (t >= 99 and t == MAX_TRAIN_NUM * 0.9) or (math.fabs(lossDiff) < 10):
-            print '[info] resample usr negative samples'
-            cdfByLabels, labelsList = getDistribution(usr2labels)
-            #print 'cdfByLabels, labelsList', cdfByLabels, labelsList
-            usr2NegativeSamples, usr2negsNonzeroCols = negativeSample(usr2labels, cdfByLabels, labelsList, k=2)
-
         t += 1
+        print '\n[info] ######################## '
+        print '[info] run == ', t
+        print '[info] ######################## '
+        # if > some run OR |loss' diff| small, then negsample
+        if (t >= 100 and t == MAX_TRAIN_NUM * 0.9) or ( math.fabs(lossDiff) < 1e-6 and t % 5 == 0 ):
+            print '[info] resample usr negative samples'
+            usr2NegativeSamples, usr2negsNonzeroCols = negativeSample(usr2labels, cdfByLabels, labelsList, k=NEG_SAMPLE_NUM)
+            print '[info] diff', lossDiff
+            print '[info] usr2NegativeSamples: '
+            for usrid in usr2NegativeSamples:
+                print usrid
+                for sample in usr2NegativeSamples[usrid]:
+                    print ' ', sample
+
         for usrid in usr2itemsIndx:
             # pooling
             usr_rep = pooler.pool_all(usr2itemsIndx[usrid], V)
 
             # get y, sumedW(for y AND negs), sigmoids(for y AND negs)
             # Warn: assume all usrs have all labels
-            y = usr2labels[usrid]
-            y_nonzeroCols = usr2NonzeroCols[usrid]
-            itemsIndx = usr2itemsIndx[usrid]
-            sumedW_y = sumOverW(W, y_nonzeroCols)
-            sigmoid_y = sigmoid((-1) * usr_rep.transpose().dot(sumedW_y))
-            y_negsNonzeroCols = usr2negsNonzeroCols[usrid]
-            sumedW_negs = map(lambda y_negNonzeroCols: sumOverW(W, y_negNonzeroCols).reshape(ITEM_FIELDS_NUM,1), y_negsNonzeroCols)
-            sigmoids_negs = map(lambda sumedW_neg: (-1) * sigmoid(usr_rep.transpose().dot(sumedW_neg)), sumedW_negs)
-            sigmoidedSumedW = np.zeros((ITEM_FIELDS_NUM,1))
-            for ind, sigmoid_neg in enumerate(sigmoids_negs):
-                sigmoidedSumedW += sigmoid_neg * sumedW_negs[ind]
+            y, y_nonzeroCols, itemsIndx, sumedW_y, sigmoid_y, y_negsNonzeroCols, sumedW_negs, sigmoids_negs, sigmoidedSumedW = getTerms(usrid, usr2labels, usr2NonzeroCols, usr2itemsIndx, W, usr_rep, usr2negsNonzeroCols)
 
             # Warn: update W by usr, not by epoch 
             # get gradient of Wq (i.e. q-th column of W)
-            gradsOfW = getGradsOfW(W, y_nonzeroCols, sumedW_y, usr_rep, sigmoids_negs, y_negsNonzeroCols)
+            gradsOfW = getGradsOfW(W, y_nonzeroCols, sigmoid_y, usr_rep, sigmoids_negs, y_negsNonzeroCols)
             
             # Warn: update V by usr, not by epoch 
             # get gradient of Vitem, itemInd in X(usrid) 
@@ -436,7 +440,8 @@ def main(argv):
             lossDiff = avgloss - prevAvgLoss 
             prevAvgLoss = avgloss
             print '[info] at run == ', t
-            print '[info] avgloss(only for train -- since this requires samples) == ', avgloss
+            print '[info] avgloss == ', avgloss, '(only for train -- since this requires samples)'
+            print '[info] delta loss == ', lossDiff
             print '[info] W[:,0] == ', W[:, 0]
             print '[info] V == ', V
 
@@ -447,16 +452,16 @@ def main(argv):
         oneErrorValid = getOneError(W, V, usr2itemsIndx_valid, usr2NonzeroCols, pooler)
         RLTrain = getRL(W, V, usr2itemsIndx, usr2NonzeroCols, pooler)
         RLValid = getRL(W, V, usr2itemsIndx_valid, usr2NonzeroCols, pooler)
-        print '[info]: train data microF1 == ', microF1Train
-        print '[info]: valid data microF1 == ', microF1Valid
-        print '[info]: train data oneError == ', oneErrorTrain
-        print '[info]: valid data oneError == ', oneErrorValid
-        print '[info]: train data RL == ', RLTrain
-        print '[info]: valid data RL == ', RLValid
+        print '[info] train data microF1 == ', microF1Train
+        print '[info] valid data microF1 == ', microF1Valid
+        print '[info] train data oneError == ', oneErrorTrain
+        print '[info] valid data oneError == ', oneErrorValid
+        print '[info] train data RL == ', RLTrain
+        print '[info] valid data RL == ', RLValid
 
-    print '[info]: for traindata ... '
+    print '[info]: for traindata, print real vals & predicted vals ... '
     printTruePredicted(W, V, usr2itemsIndx, usr2NonzeroCols, pooler)
-    print '[info]: for validdata ... '
+    print '[info]: for validdata, print real vals & predicted vals ... '
     printTruePredicted(W, V, usr2itemsIndx_valid, usr2NonzeroCols, pooler)
 
 if __name__ == '__main__':

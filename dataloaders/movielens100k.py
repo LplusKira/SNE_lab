@@ -51,7 +51,8 @@ class dataloader_movielens100k:
         ind2ItemNum = {k: v for v, k in enumerate(itemsList)}
         return usr2itemsIndx, ind2ItemNum
 
-    def get_labels(self, usr2labels_file):
+    ## get each, in usrs, usr's labels 
+    def get_labels(self, usr2labels_file, usrs):
         usr2labels = {}
         usr2nonZeroCols = {}
         fd = open(usr2labels_file, 'r')
@@ -60,20 +61,21 @@ class dataloader_movielens100k:
                 line = line.strip().split('|')
                 usr = int(line[0])
 
-                # get labels for age
-                age = int(line[1])
-                ageInd = bisect_left(AGES_BOUNDERIES, age)
-                ageLabels = self.ageindxLabelsDict[ageInd]
-                
-                # get labels for gender
-                gender = line[2]
-                genderLabels = self.genderLabelDict[gender] 
+                if usr in usrs:
+                    # get labels for age
+                    age = int(line[1])
+                    ageInd = bisect_left(AGES_BOUNDERIES, age)
+                    ageLabels = self.ageindxLabelsDict[ageInd]
+                    
+                    # get labels for gender
+                    gender = line[2]
+                    genderLabels = self.genderLabelDict[gender] 
 
-                # get labels for occupation
-                occupation = int(line[3])
-                occupationLabels = self.occupationLabelsDict[occupation]
+                    # get labels for occupation
+                    occupation = int(line[3])
+                    occupationLabels = self.occupationLabelsDict[occupation]
 
-                usr2labels[usr] = ageLabels + genderLabels + occupationLabels
+                    usr2labels[usr] = ageLabels + genderLabels + occupationLabels
             except:
                 print traceback.format_exc()
                 raise

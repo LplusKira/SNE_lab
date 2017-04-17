@@ -1,6 +1,7 @@
 # warn:
   you should exactly see no warning/err
   (if you do, it's plaussibly the weights somehow overlow)
+
 # how to run:
   ```
   pip install -r requirements.txt
@@ -12,7 +13,11 @@
   ## split your train file
   ```
   ```
-  ITEM_FIELDS_NUM=4 MAX_TRAIN_NUM=100 LEARNING_RATE=0.0002 MOMENTUM=2.0 LAMBDA=1 python run.py data/yourTrainFile
+  NEG_SAMPLE_NUM=1 ITEM_FIELDS_NUM=100 MAX_TRAIN_NUM=10000 LEARNING_RATE=0.001 MOMENTUM=1.0 LAMBDA=0.001 python run.py data/yourTrainFile > report/qq 2> report/timeqq
+  ```
+  ```
+  ## gnuplot is required
+  run cmd.sh ## e.g. ./cmd.sh train 1err
   ```
 
 # structure:
@@ -24,7 +29,7 @@
   usrid	itemid	rating	somethingNotImportant
   ```
 
-# procedure of adding modules <-- if you have time:
+# procedure of adding modules <-- no matter what:
   ```
   0. add the module and its test in `test.py`
   ```
@@ -35,4 +40,3 @@
 # ref:
   0. the dataset is from http://files.grouplens.org/datasets/movielens/ml-100k.zip
 
-# collector

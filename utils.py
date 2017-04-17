@@ -10,7 +10,7 @@ def debug(msg, val):
         print '[info] ' + msg, val
 
 # return cdf (represented by cdfByLabels, labelsList)
-# e.g. cdfByLabels = [0.3, 0.7]
+# e.g. cdfByLabels = [0.3, 0.7 + 0.3]
 # labelsList = [ [0,1], [1,0] ]
 def getDistribution(usr2Labels):
     allUsrLabels = map(lambda usr: usr2Labels[usr], usr2Labels)
@@ -34,13 +34,16 @@ def getDistribution(usr2Labels):
 def keepNonzeroColInx(l):
     return [i for i, e in enumerate(l) if e != 0]
 
-# do n times sampling, return thenm
-def sample(cdfByLabels, labelsList, n):
+# do n times sampling (must unequal to usrLabels), return them
+def sample(cdfByLabels, labelsList, usrLabels, n):
     negativeLabels = []
     for i in range(n):
         # sample which 'labels'
-        prob = random.random()
-        ind = bisect_left(cdfByLabels, prob)
+        sampledLabels = usrLabels
+        while sampledLabels == usrLabels:
+            prob = random.random()
+            ind = bisect_left(cdfByLabels, prob)
+            sampledLabels = labelsList[ind]
         negativeLabels.append(labelsList[ind])
     return negativeLabels
 
@@ -48,7 +51,8 @@ def negativeSample(usr2labels, cdfByLabels, labelsList, k=10):
     usr2NegativeSamples = {}
     usr2negsNonzeroCols = {}
     for usr in usr2labels:
-        usr2NegativeSamples[usr] = sample(cdfByLabels, labelsList, n=k)
+        usrLabels                = usr2labels[usr]
+        usr2NegativeSamples[usr] = sample(cdfByLabels, labelsList, usrLabels, n=k)
         usr2negsNonzeroCols[usr] = map(lambda x: keepNonzeroColInx(x), usr2NegativeSamples[usr])
     #print 'negativesamples, usr2negsNonzeroCols', usr2NegativeSamples, usr2negsNonzeroCols
     return usr2NegativeSamples, usr2negsNonzeroCols
