@@ -13,7 +13,7 @@
   ## split your train file
   ```
   ```
-  NEG_SAMPLE_NUM=1 ITEM_FIELDS_NUM=100 MAX_TRAIN_NUM=10000 LEARNING_RATE=0.001 MOMENTUM=1.0 LAMBDA=0.001 python run.py data/yourTrainFile > report/qq 2> report/timeqq
+  time NEG_SAMPLE_NUM=1 ITEM_FIELDS_NUM=100 MAX_TRAIN_NUM=10000 LEARNING_RATE=0.001 MOMENTUM=1.0 LAMBDA=0.001 python run.py data/yourTrainFile > report/qq 2> report/timeqq
   ```
   ```
   ## gnuplot is required
