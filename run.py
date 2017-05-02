@@ -179,6 +179,77 @@ def getRL(W, V, usr2itemsIndx, usr2NonzeroCols, pooler):
 
     return totalLoss / len(usr2itemsIndx)
         
+# get coverage 
+#   covreage = find the last one's position (ranked by predicted probability)
+#   we may assume 0 1 | 1 0 0:   prob pos(1) >= prob pos(0); prob pos(2) >= prob pos(3), prob pos(2) >= prob pos(4),
+#             pos 0 1   2 3 4 
+#   but have no other knowledge, so 'sort by prob' would just have: 1 1 0 0 0 (i.e. doesnt change its original ordery)
+#                                                                   1 2 0 3 4
+def getCoverage(W, V, usr2itemsIndx, usr2NonzeroCols, pooler):
+    totalFields = 1.0 * USR_TOTAL_LABELS_FIELDS
+    colNums = len( next(usr2NonzeroCols.itervalues()) )
+    loss = 0.0
+    for usrid in usr2itemsIndx:
+        y_nonzeroCols = usr2NonzeroCols[usrid]
+
+        # predict the most possible cols' combination
+        usr_rep = pooler.pool_all(usr2itemsIndx[usrid], V)
+        bestCols = predictLabels(usr_rep, W)
+           
+        # rank by prob (start from 0): i.e. lowest prob => bigger rank number
+        lowestOneRank = colNums - 1
+        for cnt in range(0, colNums):
+            ind = colNums - 1 - cnt
+            if bestCols[ind] > y_nonzeroCols[ind]:
+                lowestOneRank = y_nonzeroCols[ind] + cnt + 1
+                break
+            elif bestCols[ind] < y_nonzeroCols[ind]:
+                lowestOneRank = y_nonzeroCols[ind] + cnt
+                break
+            
+        loss += lowestOneRank / totalFields
+
+    return loss / len(usr2itemsIndx)
+
+
+# get average precision 
+#   we may assume 0 1 | 1 0 0:   prob pos(1) >= prob pos(0); prob pos(2) >= prob pos(3), prob pos(2) >= prob pos(4),
+#             pos 0 1   2 3 4
+#   since we still dont have each field's prob
+#     so 'sort by prob' would just have: 1 1 0 0 0 (i.e. doesnt change its original ordery)
+#                                        1 2 0 3 4
+def getAvgPrecision(W, V, usr2itemsIndx, usr2NonzeroCols, pooler):
+    colNums = len( next(usr2NonzeroCols.itervalues()) )
+    prec = 0.0
+    for usrid in usr2itemsIndx:
+        y_nonzeroCols = usr2NonzeroCols[usrid]
+
+        # predict the most possible cols' combination
+        usr_rep = pooler.pool_all(usr2itemsIndx[usrid], V)
+        bestCols = predictLabels(usr_rep, W)
+           
+        # each 'one' has a value: (its reverse pos + 1 in 'ones' by prob) / (its reverse pos + 1 in all fields by prob)
+        #                              ^^ i.e. higher porb has lowe pos
+        col2AllRank = {}
+        score = 0.0 
+        for cnt in range(0, colNums):
+            ind = colNums - 1 - cnt
+            if y_nonzeroCols[ind] == bestCols[ind]:
+              col2AllRank[ y_nonzeroCols[ind] ] = ind + 1
+            else:
+              col = y_nonzeroCols[ind]
+              col2AllRank[ col ] = col + len(filter(lambda v: v > col, bestCols))  + 1
+
+        # sort by Allrank lower to bigger 
+        rankedList = sorted(col2AllRank.items(), key=lambda x: x[1])
+        for ind, val in enumerate(rankedList):
+          score += float(ind + 1) / val[1]
+
+        prec += score / colNums
+                
+    return prec / len(usr2itemsIndx)
+
+
 
 # just print the result
 def printTruePredicted(W, V, usr2itemsIndx, usr2NonzeroCols, pooler):
@@ -452,12 +523,20 @@ def main(argv):
         oneErrorValid = getOneError(W, V, usr2itemsIndx_valid, usr2NonzeroCols, pooler)
         RLTrain = getRL(W, V, usr2itemsIndx, usr2NonzeroCols, pooler)
         RLValid = getRL(W, V, usr2itemsIndx_valid, usr2NonzeroCols, pooler)
+        coverageTrain = getCoverage(W, V, usr2itemsIndx, usr2NonzeroCols, pooler)
+        coverageValid = getCoverage(W, V, usr2itemsIndx_valid, usr2NonzeroCols, pooler)
+        avgPrecTrain = getAvgPrecision(W, V, usr2itemsIndx, usr2NonzeroCols, pooler)
+        avgPrecValid = getAvgPrecision(W, V, usr2itemsIndx_valid, usr2NonzeroCols, pooler)
         print '[info] train data microF1 == ', microF1Train
         print '[info] valid data microF1 == ', microF1Valid
         print '[info] train data oneError == ', oneErrorTrain
         print '[info] valid data oneError == ', oneErrorValid
         print '[info] train data RL == ', RLTrain
         print '[info] valid data RL == ', RLValid
+        print '[info] train data coverage == ', coverageTrain
+        print '[info] valid data coverage == ', coverageValid
+        print '[info] train data avgPrec == ', avgPrecTrain
+        print '[info] valid data avgPrec == ', avgPrecValid
 
     print '[info]: for traindata, print real vals & predicted vals ... '
     printTruePredicted(W, V, usr2itemsIndx, usr2NonzeroCols, pooler)

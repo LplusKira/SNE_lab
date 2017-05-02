@@ -3,7 +3,7 @@ sys.path.insert(0, '../')
 import unittest
 import numpy as np
 
-from run import getRL, getOneError, getMicroF1ByCol, predictLabels, updateByGradients, getGradsOfW, getGradsOfV, getTerms, sumOverW, sigmoid 
+from run import getRL, getOneError, getMicroF1ByCol, getCoverage, getAvgPrecision, predictLabels, updateByGradients, getGradsOfW, getGradsOfV, getTerms, sumOverW, sigmoid 
 import poolers.sample_pooler as sample_pooler
 from config import LAMBDA, LEARNING_RATE, ITEM_FIELDS_NUM
 from utils import getDistribution, negativeSample
@@ -390,6 +390,61 @@ class TestRun(unittest.TestCase):
             for comb in actualDict:
                 self.assertEqual(math.fabs(actualDict[comb] - expectDict[usr][comb]) < 40, True)
 
+    # validate getCoverage
+    def test_getCoverage(self):
+        pooler = sample_pooler.sample_pooler()
+        V       = np.array([ [1, 1, 1], \
+                             [1, 1, 1], \
+                           ])
+        W       = np.array( [ [ 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0],
+                              [ 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0],
+                              [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+                              # 0,       3, 4, 5,            ... 11 ...                                       26
+                             ])
+        usr2itemsIndx = {
+          0: [0,1],
+          1: [1],
+          2: [0],
+        }
+
+        usr2NonzeroCols = {
+          0: [0, 4, 11],
+          1: [1, 4, 10],
+          2: [2, 4, 26],
+        }
+
+        # should all guess 3,5,11
+        expectCoverage = (6.0/27 + 11.0/27 + 26.0/27) / 3
+        actualOneError = getCoverage(W, V, usr2itemsIndx, usr2NonzeroCols, pooler)
+        self.assertEqual(expectCoverage, actualOneError) 
+
+    # validate getAvgPrecision
+    def test_getAvgPrecision(self):
+        pooler = sample_pooler.sample_pooler()
+        V       = np.array([ [1, 1, 1], \
+                             [1, 1, 1], \
+                           ])
+        W       = np.array( [ [ 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0],
+                              [ 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0],
+                              [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+                              # 0,       3, 4, 5,            ... 11 ...                                       26
+                             ])
+        usr2itemsIndx = {
+          0: [0,1],
+          1: [1],
+          2: [0],
+        }
+
+        usr2NonzeroCols = {
+          0: [0, 4, 11],
+          1: [1, 4, 10],
+          2: [2, 4, 26],
+        }
+
+        # should all guess 3,5,11
+        expectAvgPrecision = ( ( 2.0 / 4 + 3.0 / 7 + 1.0 / 3) / 3 + ( 1.0/5 + 2.0/7 + 3.0/12) / 3 + ( 1.0/6 + 2.0/7 + 3.0/27) / 3 ) / 3
+        actualAvgPrecision = getAvgPrecision(W, V, usr2itemsIndx, usr2NonzeroCols, pooler)
+        self.assertEqual(expectAvgPrecision, actualAvgPrecision)
 
 if __name__ == '__main__':
     unittest.main()

@@ -1,5 +1,6 @@
 #!/bin/bash
-data="/Users/lpluskira/lab/SNE_lab/report/qq"  # where you save the log
+data="/Users/lpluskira/lab/SNE_lab/report/200Feat"  # where you save the log
+#data="/Users/lpluskira/lab/SNE_lab/report/400F"  # where you save the log
 dir=`mktemp -d`                                # tmp dir for saving plot data
 
 if [ "$1" == "train" ]; then
@@ -11,7 +12,7 @@ if [ "$1" == "train" ]; then
     elif [ "$2" == "rl" ]; then
       awk -F'train data RL == ' -v a=0 '{if($2 != "") { a += 1; print a","$2; }}' ${data} > "${dir}/stats"
     else
-      echo "bash $0 f1|1err"
+      echo "[usage]: bash $0 train/valid f1|1err|rl"
       exit 1
     fi
     
@@ -19,7 +20,7 @@ if [ "$1" == "train" ]; then
     gnuplot -e "filename='${dir}/stats'" plot.sh
     rm -rf "${dir}/stats"
   else
-    echo "[usage]: bash $0 f1|1err"
+    echo "[usage]: bash $0 train/valid f1|1err|rl"
   fi
 elif [ "$1" == "valid" ]; then
   if [ "$2" != "" ]; then
@@ -30,7 +31,7 @@ elif [ "$1" == "valid" ]; then
     elif [ "$2" == "rl" ]; then
       awk -F'valid data RL == ' -v a=0 '{if($2 != "") { a += 1; print a","$2; }}' ${data} > "${dir}/stats"
     else
-      echo "bash $0 f1|1err"
+      echo "[usage]: bash $0 train/valid f1|1err|rl"
       exit 1
     fi
     
@@ -38,9 +39,9 @@ elif [ "$1" == "valid" ]; then
     gnuplot -e "filename='${dir}/stats'" plot.sh
     rm -rf "${dir}/stats"
   else
-    echo "[usage]: bash $0 f1|1err"
+    echo "[usage]: bash $0 train/valid f1|1err|rl"
   fi
 else
-  echo "[usage]: bash $0 f1|1err"
+  echo "[usage]: bash $0 train/valid f1|1err|rl"
 fi
 
