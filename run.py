@@ -249,6 +249,28 @@ def getAvgPrecision(W, V, usr2itemsIndx, usr2NonzeroCols, pooler):
                 
     return prec / len(usr2itemsIndx)
 
+# get  hamming loss
+#   we may assume 0 1 | 1 0 0:  pred 
+#                 1 0 | 0 1 0:  real 
+#   since the papaer itself doesnt specify, we use pred XOR(by attribute) real (i.e. 1 | 1 => hamming loss (for this): 2/2)
+def getHammingLoss(W, V, usr2itemsIndx, usr2NonzeroCols, pooler):
+    colNums = len( next(usr2NonzeroCols.itervalues()) )
+    loss = 0.0
+    for usrid in usr2itemsIndx:
+        y_nonzeroCols = usr2NonzeroCols[usrid]
+
+        # predict the most possible cols' combination
+        usr_rep = pooler.pool_all(usr2itemsIndx[usrid], V)
+        bestCols = predictLabels(usr_rep, W)
+           
+        dataPointLoss = 0.0
+        for ind, val in enumerate(bestCols):
+            if bestCols[ind] != y_nonzeroCols[ind]:
+                dataPointLoss += 1.0
+    
+        loss += dataPointLoss / colNums
+    return loss / len(usr2itemsIndx)
+
 
 
 # just print the result
@@ -527,6 +549,9 @@ def main(argv):
         coverageValid = getCoverage(W, V, usr2itemsIndx_valid, usr2NonzeroCols, pooler)
         avgPrecTrain = getAvgPrecision(W, V, usr2itemsIndx, usr2NonzeroCols, pooler)
         avgPrecValid = getAvgPrecision(W, V, usr2itemsIndx_valid, usr2NonzeroCols, pooler)
+        HLTrain = getHammingLoss(W, V, usr2itemsIndx, usr2NonzeroCols, pooler)
+        HLValid = getHammingLoss(W, V, usr2itemsIndx_valid, usr2NonzeroCols, pooler)
+        
         print '[info] train data microF1 == ', microF1Train
         print '[info] valid data microF1 == ', microF1Valid
         print '[info] train data oneError == ', oneErrorTrain
@@ -537,6 +562,8 @@ def main(argv):
         print '[info] valid data coverage == ', coverageValid
         print '[info] train data avgPrec == ', avgPrecTrain
         print '[info] valid data avgPrec == ', avgPrecValid
+        print '[info] train data hammingLoss == ', HLTrain
+        print '[info] valid data hammingLoss == ', HLValid
 
     print '[info]: for traindata, print real vals & predicted vals ... '
     printTruePredicted(W, V, usr2itemsIndx, usr2NonzeroCols, pooler)
