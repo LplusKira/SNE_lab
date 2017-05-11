@@ -3,7 +3,7 @@ sys.path.insert(0, '../')
 import unittest
 import numpy as np
 
-from run import getRL, getOneError, getMicroF1ByCol, getCoverage, getAvgPrecision, predictLabels, updateByGradients, getGradsOfW, getGradsOfV, getTerms, sumOverW, sigmoid 
+from run import getRL, getOneError, getMicroF1ByCol, getCoverage, getAvgPrecision, getHammingLoss, predictLabels, updateByGradients, getGradsOfW, getGradsOfV, getTerms, sumOverW, sigmoid 
 import poolers.sample_pooler as sample_pooler
 from config import LAMBDA, LEARNING_RATE, ITEM_FIELDS_NUM
 from utils import getDistribution, negativeSample
@@ -445,6 +445,34 @@ class TestRun(unittest.TestCase):
         expectAvgPrecision = ( ( 2.0 / 4 + 3.0 / 7 + 1.0 / 3) / 3 + ( 1.0/5 + 2.0/7 + 3.0/12) / 3 + ( 1.0/6 + 2.0/7 + 3.0/27) / 3 ) / 3
         actualAvgPrecision = getAvgPrecision(W, V, usr2itemsIndx, usr2NonzeroCols, pooler)
         self.assertEqual(expectAvgPrecision, actualAvgPrecision)
+
+    # validate getHammingLoss
+    def test_getHammingLoss(self):
+        pooler = sample_pooler.sample_pooler()
+        V       = np.array([ [1, 1, 1], \
+                             [1, 1, 1], \
+                           ])
+        W       = np.array( [ [ 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0],
+                              [ 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0],
+                              [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+                              # 0,       3, 4, 5,            ... 11 ...                                       26
+                             ])
+        usr2itemsIndx = {
+          0: [0,1],
+          1: [1],
+          2: [0],
+        }
+
+        usr2NonzeroCols = {
+          0: [0, 4, 11],
+          1: [1, 4, 10],
+          2: [2, 4, 26],
+        }
+
+        # should all guess 3,5,11
+        expectHammingLoss = ( ( 1 + 1 + 0) / 3.0 + ( 1 + 1 + 1) / 3.0 + ( 1 + 1 + 1 ) / 3.0 ) / 3
+        actualHammingLoss = getHammingLoss(W, V, usr2itemsIndx, usr2NonzeroCols, pooler)
+        self.assertEqual(expectHammingLoss, actualHammingLoss)
 
 if __name__ == '__main__':
     unittest.main()
