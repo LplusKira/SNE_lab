@@ -5,6 +5,8 @@ from config import USR_TOTAL_LABELS_FIELDS, ITEM_FIELDS_NUM, MAX_TRAIN_NUM, LAMB
 
 import math, random, sys, traceback
 import numpy as np
+from time import gmtime, strftime
+
 np.random.seed(0)  # Reproducibility
 
 # TODO: modify this: hard code num of fields + each field's size(category num)
@@ -493,6 +495,7 @@ def main(argv):
         print '\n[info] ######################## '
         print '[info] run == ', t
         print '[info] ######################## '
+        print '[info] time == ', strftime("%Y-%m-%d %H:%M:%S", gmtime())
         # if > some run OR |loss' diff| small, then negsample
         if (t >= 100 and t == MAX_TRAIN_NUM * 0.9) or ( math.fabs(lossDiff) < 1e-6 and t % 5 == 0 ):
             print '[info] resample usr negative samples'
