@@ -1,4 +1,5 @@
-import dataloaders.movielens100k as dataloader_movielens100k
+#import dataloaders.movielens100k as dataloader_movielens100k
+import dataloaders.movielens1m as dataloader_movielens1m
 import poolers.sample_pooler as sample_pooler
 from utils import getDistribution, negativeSample, debug
 from config import USR_TOTAL_LABELS_FIELDS, ITEM_FIELDS_NUM, MAX_TRAIN_NUM, LAMBDA, LEARNING_RATE, MOMENTUM, NEG_SAMPLE_NUM
@@ -44,11 +45,11 @@ def updateByGradients(W, V, gradsOfW, gradsOfV, incrInd):
 
 def predictLabels(usr_rep, W):
     # XXX, its hard-coded and inefficient now
-    bestCols = [0, 4, 6]
+    bestCols = [0, 7, 9]
     bestScore = usr_rep.transpose().dot( sumOverW(W, bestCols) )
-    for i1 in range(4):
-        for i2 in range(4, 4+2):
-            for i3 in range(6, 6+21):
+    for i1 in range(7):
+        for i2 in range(7, 7+2):
+            for i3 in range(9, 9+21):
                 y_nonzeroCols_sample = [i1, i2, i3]
                 sumedW = sumOverW(W, y_nonzeroCols_sample)
                 score = usr_rep.transpose().dot( sumedW )
@@ -155,7 +156,7 @@ def getRL(W, V, usr2itemsIndx, usr2NonzeroCols, pooler):
     for usrid in usr2itemsIndx:
         usr_rep = pooler.pool_all(usr2itemsIndx[usrid], V)
         y_nonzeroCols = usr2NonzeroCols[usrid]
-        y_zeroCols = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26]
+        y_zeroCols = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29]
         col2Val = map(lambda v: [v, 0], y_zeroCols)
         for v in y_nonzeroCols:
             y_zeroCols.remove(v)
@@ -434,7 +435,7 @@ def main(argv):
     #    1: [1,2],
     #  }
     # Rmk: the part for 'filtering rating >= 3' is done in file
-    dataloader = dataloader_movielens100k.dataloader_movielens100k()
+    dataloader = dataloader_movielens1m.dataloader_movielens1m()
     usr2itemsIndx, ind2itemNum = dataloader.load(argv[0])
     usrs = map(lambda usr: usr, usr2itemsIndx)
     usr2itemsIndx, usr2itemsIndx_valid = splitTrainTest(usr2itemsIndx)
@@ -453,8 +454,8 @@ def main(argv):
     #   0: [2, 3],
     #   1: [0, 4],
     # }
-    usr2labels = dataloader.get_labels('data/usrAgeGenOccu', usrs)
-    usr2NonzeroCols = dataloader.get_nonZeroCols('data/usrAgeGenOccu')
+    usr2labels = dataloader.get_labels('data/1m/usrAgeGenOccu', usrs)
+    usr2NonzeroCols = dataloader.get_nonZeroCols('data/1m/usrAgeGenOccu')
     print '[info] usr2labels, usr2NonzeroCols loaded'
     
 
@@ -528,7 +529,7 @@ def main(argv):
             # update gradients to W, V
             W, V = updateByGradients(W, V, gradsOfW, gradsOfV, incrInd)
 
-            if usrid % 20 == 0:
+            if usrid % 200 == 0:
                 print '[info] usr', usrid, 'l2 norm of gradsOfW == ', np.linalg.norm(gradsOfW)
 
         if t % 5 == 0:
