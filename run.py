@@ -8,7 +8,8 @@ import math, random, sys, traceback
 import numpy as np
 from time import gmtime, strftime
 
-np.random.seed(0)  # Reproducibility
+np.random.seed( int(sys.argv[2]) )  # Reproducibility
+random.seed( int(sys.argv[2]) )     # Reproducibility
 
 # TODO: modify this: hard code num of fields + each field's size(category num)
 # ref: http://stackoverflow.com/questions/8386675/extracting-specific-columns-in-numpy-array
@@ -295,7 +296,9 @@ def splitTrainTest(usr2itemsIndx):
     cnt = 0
     usr2itemsIndx_train = {}
     usr2itemsIndx_valid = {}
-    for usr in usr2itemsIndx:
+    usrKeys = list(usr2itemsIndx.keys())
+    random.shuffle(usrKeys)
+    for usr in usrKeys:
         if cnt > totalUsrs * 0.1:
             usr2itemsIndx_train[usr] = usr2itemsIndx[usr]
         else:
@@ -419,9 +422,10 @@ def getTerms(usrid, usr2labels, usr2NonzeroCols, usr2itemsIndx, W, usr_rep, usr2
     return y, y_nonzeroCols, itemsIndx, sumedW_y, sigmoid_y, y_negsNonzeroCols, sumedW_negs, sigmoids_negs, sigmoidedSumedW
    
 def main(argv):
-    if not len(argv) == 1:
-        print '[info] usage: python run.py yourtraindata'
+    if not len(argv) == 2:
+        print '[info] usage: python run.py yourtraindata randomSeed(int)'
         return 1
+
     
     ''' load each usr's BOI (and for valid data) ''' 
     # sample: 
@@ -440,8 +444,8 @@ def main(argv):
     usrs = map(lambda usr: usr, usr2itemsIndx)
     usr2itemsIndx, usr2itemsIndx_valid = splitTrainTest(usr2itemsIndx)
     print '[info] usr2itemsIndx, usr2itemsIndx_valid loaded'
-    print '[info] usrs in train: ', len(usr2itemsIndx)
-    print '[info] usrs in valid: ', len(usr2itemsIndx_valid)
+    print '[info] usrs in train: ', usr2itemsIndx.keys()
+    print '[info] usrs in valid: ', usr2itemsIndx_valid.keys()
     
     
     ''' acquire (for all usrs) usr2labels & usr2NonzeroCols ''' 

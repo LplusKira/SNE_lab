@@ -7,7 +7,12 @@
 #data="/home/miuser/qq/SNE_lab/report/100F"  # where you save the log
 #data="/home/miuser/qq/SNE_lab/report/200F"  # where you save the log
 #data="/home/miuser/qq/SNE_lab/report/300F"  # where you save the log
-data="/home/miuser/qq/SNE_lab/report/400F"  # where you save the log
+#data="/home/miuser/qq/SNE_lab/report/400F"  # where you save the log
+
+#data="/home/miuser/qq/SNE_lab/report/100F1m"  # where you save the log
+#data="/home/miuser/qq/SNE_lab/report/200F1m"  # where you save the log
+#data="/home/miuser/qq/SNE_lab/report/300F1m"  # where you save the log
+data="/home/miuser/qq/SNE_lab/report/400F1m"  # where you save the log
 dir=`mktemp -d`                                # tmp dir for saving plot data
 
 if [ "$1" == "train" ]; then
