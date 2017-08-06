@@ -7,7 +7,8 @@ import math, random, sys, traceback
 import numpy as np
 from time import gmtime, strftime
 
-np.random.seed(0)  # Reproducibility
+np.random.seed(int(sys.argv[2]))  # Reproducibility
+print 'seed', int(sys.argv[2])
 
 # TODO: modify this: hard code num of fields + each field's size(category num)
 # ref: http://stackoverflow.com/questions/8386675/extracting-specific-columns-in-numpy-array
@@ -418,8 +419,8 @@ def getTerms(usrid, usr2labels, usr2NonzeroCols, usr2itemsIndx, W, usr_rep, usr2
     return y, y_nonzeroCols, itemsIndx, sumedW_y, sigmoid_y, y_negsNonzeroCols, sumedW_negs, sigmoids_negs, sigmoidedSumedW
    
 def main(argv):
-    if not len(argv) == 1:
-        print '[info] usage: python run.py yourtraindata'
+    if not len(argv) == 2:
+        print '[info] usage: python run.py yourtraindata randomSeed(int)'
         return 1
     
     ''' load each usr's BOI (and for valid data) ''' 
@@ -489,8 +490,7 @@ def main(argv):
     lossDiff     = float('inf')
     t            = 0
     incrInd      = False
-    #while t <= MAX_TRAIN_NUM:
-    while microF1Valid < 0.5 and t <= MAX_TRAIN_NUM:
+    while t <= MAX_TRAIN_NUM:
         t += 1
         print '\n[info] ######################## '
         print '[info] run == ', t
@@ -528,10 +528,10 @@ def main(argv):
             # update gradients to W, V
             W, V = updateByGradients(W, V, gradsOfW, gradsOfV, incrInd)
 
-            if usrid % 20 == 0:
+            if usrid % 500 == 0:
                 print '[info] usr', usrid, 'l2 norm of gradsOfW == ', np.linalg.norm(gradsOfW)
 
-        if t % 5 == 0:
+        if t % 800 == 0:
             avgloss = getAvgLoss(W, V, usr2NonzeroCols, usr2negsNonzeroCols, usr2itemsIndx, pooler)
             lossDiff = avgloss - prevAvgLoss 
             prevAvgLoss = avgloss
@@ -541,37 +541,38 @@ def main(argv):
             print '[info] W[:,0] == ', W[:, 0]
             print '[info] V == ', V
 
-        # check performance by microF1, oneError
-        microF1Train = getMicroF1ByCol(W, V, usr2itemsIndx, usr2NonzeroCols, pooler)
-        microF1Valid = getMicroF1ByCol(W, V, usr2itemsIndx_valid, usr2NonzeroCols, pooler)
-        oneErrorTrain = getOneError(W, V, usr2itemsIndx, usr2NonzeroCols, pooler)
-        oneErrorValid = getOneError(W, V, usr2itemsIndx_valid, usr2NonzeroCols, pooler)
-        RLTrain = getRL(W, V, usr2itemsIndx, usr2NonzeroCols, pooler)
-        RLValid = getRL(W, V, usr2itemsIndx_valid, usr2NonzeroCols, pooler)
-        coverageTrain = getCoverage(W, V, usr2itemsIndx, usr2NonzeroCols, pooler)
-        coverageValid = getCoverage(W, V, usr2itemsIndx_valid, usr2NonzeroCols, pooler)
-        avgPrecTrain = getAvgPrecision(W, V, usr2itemsIndx, usr2NonzeroCols, pooler)
-        avgPrecValid = getAvgPrecision(W, V, usr2itemsIndx_valid, usr2NonzeroCols, pooler)
-        HLTrain = getHammingLoss(W, V, usr2itemsIndx, usr2NonzeroCols, pooler)
-        HLValid = getHammingLoss(W, V, usr2itemsIndx_valid, usr2NonzeroCols, pooler)
-        
-        print '[info] train data microF1 == ', microF1Train
-        print '[info] valid data microF1 == ', microF1Valid
-        print '[info] train data oneError == ', oneErrorTrain
-        print '[info] valid data oneError == ', oneErrorValid
-        print '[info] train data RL == ', RLTrain
-        print '[info] valid data RL == ', RLValid
-        print '[info] train data coverage == ', coverageTrain
-        print '[info] valid data coverage == ', coverageValid
-        print '[info] train data avgPrec == ', avgPrecTrain
-        print '[info] valid data avgPrec == ', avgPrecValid
-        print '[info] train data hammingLoss == ', HLTrain
-        print '[info] valid data hammingLoss == ', HLValid
+        if t % 100 == 0:
+            # check performance by microF1, oneError
+            microF1Train = getMicroF1ByCol(W, V, usr2itemsIndx, usr2NonzeroCols, pooler)
+            microF1Valid = getMicroF1ByCol(W, V, usr2itemsIndx_valid, usr2NonzeroCols, pooler)
+            oneErrorTrain = getOneError(W, V, usr2itemsIndx, usr2NonzeroCols, pooler)
+            oneErrorValid = getOneError(W, V, usr2itemsIndx_valid, usr2NonzeroCols, pooler)
+            RLTrain = getRL(W, V, usr2itemsIndx, usr2NonzeroCols, pooler)
+            RLValid = getRL(W, V, usr2itemsIndx_valid, usr2NonzeroCols, pooler)
+            coverageTrain = getCoverage(W, V, usr2itemsIndx, usr2NonzeroCols, pooler)
+            coverageValid = getCoverage(W, V, usr2itemsIndx_valid, usr2NonzeroCols, pooler)
+            avgPrecTrain = getAvgPrecision(W, V, usr2itemsIndx, usr2NonzeroCols, pooler)
+            avgPrecValid = getAvgPrecision(W, V, usr2itemsIndx_valid, usr2NonzeroCols, pooler)
+            HLTrain = getHammingLoss(W, V, usr2itemsIndx, usr2NonzeroCols, pooler)
+            HLValid = getHammingLoss(W, V, usr2itemsIndx_valid, usr2NonzeroCols, pooler)
+            
+            print '[info] train data microF1 == ', microF1Train
+            print '[info] valid data microF1 == ', microF1Valid
+            print '[info] train data oneError == ', oneErrorTrain
+            print '[info] valid data oneError == ', oneErrorValid
+            print '[info] train data RL == ', RLTrain
+            print '[info] valid data RL == ', RLValid
+            print '[info] train data coverage == ', coverageTrain
+            print '[info] valid data coverage == ', coverageValid
+            print '[info] train data avgPrec == ', avgPrecTrain
+            print '[info] valid data avgPrec == ', avgPrecValid
+            print '[info] train data hammingLoss == ', HLTrain
+            print '[info] valid data hammingLoss == ', HLValid
 
-    print '[info]: for traindata, print real vals & predicted vals ... '
-    printTruePredicted(W, V, usr2itemsIndx, usr2NonzeroCols, pooler)
-    print '[info]: for validdata, print real vals & predicted vals ... '
-    printTruePredicted(W, V, usr2itemsIndx_valid, usr2NonzeroCols, pooler)
+            print '[info]: for traindata, print real vals & predicted vals ... '
+            printTruePredicted(W, V, usr2itemsIndx, usr2NonzeroCols, pooler)
+            print '[info]: for validdata, print real vals & predicted vals ... '
+            printTruePredicted(W, V, usr2itemsIndx_valid, usr2NonzeroCols, pooler)
 
 if __name__ == '__main__':
     main(sys.argv[1:])
