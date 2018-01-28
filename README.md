@@ -13,7 +13,7 @@
   ## split your train file
   ```
   ```
-  time NEG_SAMPLE_NUM=1 ITEM_FIELDS_NUM=100 MAX_TRAIN_NUM=10000 LEARNING_RATE=0.001 MOMENTUM=1.0 LAMBDA=0.001 python SNE_lab/sne_lab.py data/yourTrainFile > report/qq 2> report/timeqq
+  NEG_SAMPLE_NUM=1 ITEM_FIELDS_NUM=100 MAX_TRAIN_NUM=10000 LEARNING_RATE=0.001 MOMENTUM=1.0 LAMBDA=0.001 nohup python -u sne_lab.py 0 > report/100Fego-net_0 &
   ```
   ```
   ## gnuplot is required
