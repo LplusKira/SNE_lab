@@ -1,40 +1,37 @@
-import dataloaders.movielens100k as dataloader_movielens100k
-import poolers.sample_pooler as sample_pooler
+#import dataloaders.movielens100k as dataloader_movielens100k
+from dataloaders.EgoNetwork import ENLoader
+from poolers.sample_pooler import sample_pooler
 from utils import getDistribution, negativeSample, debug
-from config import USR_TOTAL_LABELS_FIELDS, ITEM_FIELDS_NUM, MAX_TRAIN_NUM, LAMBDA, LEARNING_RATE, MOMENTUM, NEG_SAMPLE_NUM
+from config import ITEM_FIELDS_NUM, MAX_TRAIN_NUM, LAMBDA, LEARNING_RATE, MOMENTUM, NEG_SAMPLE_NUM
 
 import math, random, sys, traceback
 import numpy as np
 from time import gmtime, strftime
+from itertools import product
 
-np.random.seed(0)  # Reproducibility
+np.random.seed( int(sys.argv[1]) ) # Reproducibility
+random.seed( int(sys.argv[1]) )    # Reproducibility
 
-# TODO: modify this: hard code num of fields + each field's size(category num)
-# ref: http://stackoverflow.com/questions/8386675/extracting-specific-columns-in-numpy-array
-def takeNonZero(W, y):
-    # y = list of nonzeor col's indice
-    return W[:,y]
-
-# return 1-dim by summing 'nonzeor cols'(the corresponding one-hot val is nonzero) of W
+# Return 1-dim ndarray by summing 'nonzeor cols' (by y) of W
 def sumOverW(W, y):
-    # Wn notes the 'nonzero cols' of W's concatenated matrix
-    Wn = takeNonZero(W, y)
+    # Ref: https://stackoverflow.com/a/8386737
+    # Wn: 'nonzero cols' of W's concatenated matrix
+    Wn = W[:,y]
     return Wn.sum(axis=1)   
 
+# XXX suspicious -- really not in Math OR np?
+# Return 1 / (1 + math.exp(-x)) || 0.001
 def sigmoid(x):
-    #return 1 / (1 + math.exp(-x))
     try:
         return 1 / (1 + math.exp(-x))
     except:
-        # the only exception: x << 0 => exp(-x) explodes
+        # Only exception: x << 0 => exp(-x) explodes
         return 0.001
-        #print traceback.format_exc()
-        #sys.exit(1)
 
-# here gradsOfW is a numpy 2D array
-#      gradsOfV is {
-#          someitemInd: itsGrad
-#      ... }
+# gradsOfW 2-dim ndarray
+# gradsOfV: {
+#   someitemInd: itsGrad
+# ... }
 def updateByGradients(W, V, gradsOfW, gradsOfV, incrInd):
     scale = MOMENTUM if incrInd else 1/MOMENTUM
     W -= scale * LEARNING_RATE * gradsOfW
@@ -42,75 +39,56 @@ def updateByGradients(W, V, gradsOfW, gradsOfV, incrInd):
         V[itemInd, :] -= scale * LEARNING_RATE * gradsOfV[itemInd]
     return W, V
 
-def predictLabels(usr_rep, W):
-    # XXX, its hard-coded and inefficient now
-    bestCols = [0, 4, 6]
+def predictLabels(usr_rep, W, bds):
+    bestCols = map(lambda v: v[0], bds)
     bestScore = usr_rep.transpose().dot( sumOverW(W, bestCols) )
-    for i1 in range(4):
-        for i2 in range(4, 4+2):
-            for i3 in range(6, 6+21):
-                y_nonzeroCols_sample = [i1, i2, i3]
-                sumedW = sumOverW(W, y_nonzeroCols_sample)
-                score = usr_rep.transpose().dot( sumedW )
-                if score >= bestScore:
-                    bestScore = score
-                    bestCols = y_nonzeroCols_sample
+    allCombs = list(product( *bds ))
+    for comb in allCombs:
+        y_nonzeroCols_sample = list(comb)
+        sumedW = sumOverW(W, y_nonzeroCols_sample)
+        score = usr_rep.transpose().dot( sumedW )
+        if score >= bestScore:
+            bestScore = score
+            bestCols = y_nonzeroCols_sample
     return bestCols
 
-# get RMSE
-def getRMSE(W, V, usr2itemsIndx, usr2NonzeroCols, pooler):
-    totalSquaredErr = 0.0
-    for usrid in usr2itemsIndx:
-        usr_rep = pooler.pool_all(usr2itemsIndx[usrid], V)
-        y_nonzeroCols = usr2NonzeroCols[usrid]
-
-        # predict the most possible cols' combination
-        bestCols = predictLabels(usr_rep, W)
-
-        # calculate the error for such usrid
-        squaredErr = ( len( list(set().union(bestCols, y_nonzeroCols)) ) - 3 ) * 2
-        totalSquaredErr += squaredErr
-    return math.sqrt(totalSquaredErr/len(usr2itemsIndx))
-
-# return {
-#  0: tp list(of cols) 
-#  1: fp list(of cols)
-#  2: tn list(of cols)
-# }
-def getClasses(trueCols, predictedCols):
-    # XXX hard coded
-    classDict = {
-      0: [],
-      1: [],
-      2: [],
-    }
-    for col in trueCols:
-        if col in predictedCols:
-            classDict[0].append(col)
-        else:
-            classDict[2].append(col)
-    for col in predictedCols:
-        if col not in trueCols:
-            classDict[1].append(col)
-    return classDict
 
 # ref(how to cal microf1): http://rushdishams.blogspot.tw/2011/08/micro-and-macro-average-of-precision.html
-# get micro f1 by age/gender/occupation
-def getMicroF1ByCol(W, V, usr2itemsIndx, usr2NonzeroCols, pooler):
-    # XXX hard coded: age/gender/occupation
-    tpList = [0.0] * USR_TOTAL_LABELS_FIELDS
-    fpList = [0.0] * USR_TOTAL_LABELS_FIELDS
-    tnList = [0.0] * USR_TOTAL_LABELS_FIELDS
-    for usrid in usr2itemsIndx:
-        usr_rep = pooler.pool_all(usr2itemsIndx[usrid], V)
-        y_nonzeroCols = usr2NonzeroCols[usrid]
+def getMicroF1ByCol(W, V, usr2itemsIndx, usr2NonzeroCols, u2predictions, totalLabelsNum):
 
-        # predict the most possible cols' combination
-        bestCols = predictLabels(usr_rep, W)
+    # return {
+    #  0: tp list(of cols) 
+    #  1: fp list(of cols)
+    #  2: tn list(of cols)
+    # }
+    def getClasses(trueCols, predictedCols):
+        # XXX hard coded
+        classDict = {
+          0: [],
+          1: [],
+          2: [],
+        }
+        for col in trueCols:
+            if col in predictedCols:
+                classDict[0].append(col)
+            else:
+                classDict[2].append(col)
+        for col in predictedCols:
+            if col not in trueCols:
+                classDict[1].append(col)
+        return classDict
+
+    tpList = [0.0] * totalLabelsNum
+    fpList = [0.0] * totalLabelsNum
+    tnList = [0.0] * totalLabelsNum
+    for usrid in usr2itemsIndx:
+        y_nonzeroCols = usr2NonzeroCols[usrid]
+        bestCols = u2predictions[usrid]
 
         # update tp, fp, tn
         # 0: tp, 1: fp, 2: tn
         classDict = getClasses(y_nonzeroCols, bestCols)
+        #print classDict
         for col in classDict[0]:
             tpList[col] += 1.0
         for col in classDict[1]:
@@ -131,43 +109,41 @@ def getMicroF1ByCol(W, V, usr2itemsIndx, usr2NonzeroCols, pooler):
 
 # get one error
 #   one error = sum( has one class hits or not ) / dataPointsNum
-def getOneError(W, V, usr2itemsIndx, usr2NonzeroCols, pooler):
+def getOneError(W, V, usr2itemsIndx, usr2NonzeroCols, u2predictions):
     errCnt = len(usr2itemsIndx)
     usrCnt = len(usr2itemsIndx)
     for usrid in usr2itemsIndx:
-        usr_rep = pooler.pool_all(usr2itemsIndx[usrid], V)
         y_nonzeroCols = usr2NonzeroCols[usrid]
-
-        # predict the most possible cols' combination
-        bestCols = predictLabels(usr_rep, W)
+        bestCols = u2predictions[usrid]
         for ind, col in enumerate(bestCols):
             if col == y_nonzeroCols[ind]:
                 # if one class(col) hits, then no err for this usr
                 errCnt -= 1
                 break
     return errCnt / float(usrCnt)
-                
+
 # get RL (ranking loss)
-#   it's .. ??? 
+#   it's .. (0,1) pair's examination 
 # TODO: may modify the way this calculates .. inefficient now
-def getRL(W, V, usr2itemsIndx, usr2NonzeroCols, pooler):
+def getRL(W, V, usr2itemsIndx, usr2NonzeroCols, u2predictions, totalLabelsNum, rlPairsCnt):
     totalLoss = 0.0
+    rlPairsCnt = float(rlPairsCnt)
     for usrid in usr2itemsIndx:
-        usr_rep = pooler.pool_all(usr2itemsIndx[usrid], V)
+        bestCols = u2predictions[usrid]
         y_nonzeroCols = usr2NonzeroCols[usrid]
-        y_zeroCols = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26]
+        
+        y_zeroCols = range(totalLabelsNum)
         col2Val = map(lambda v: [v, 0], y_zeroCols)
         for v in y_nonzeroCols:
             y_zeroCols.remove(v)
 
-        # predict the most possible cols' combination + add to sort list
-        bestCols = predictLabels(usr_rep, W)
         for v in bestCols:
             col2Val[v][1] = 1
         col2Val.sort(key=lambda v: v[1], reverse=True)
         col2Order = {}
         for ind, v in enumerate(col2Val):
             col2Order[v[0]] = ind
+        
 
         # check for every true's '0','1''s indx pair
         # if the ordery of predicted is reverse => err ++
@@ -176,30 +152,28 @@ def getRL(W, V, usr2itemsIndx, usr2NonzeroCols, pooler):
             for col2 in y_nonzeroCols:
                 if col2Order[col1] < col2Order[col2]:
                     errCnt += 1
-        lossPerUsr = errCnt / 72.0 # <-- hard-coded here
+        lossPerUsr = errCnt / rlPairsCnt
         totalLoss += lossPerUsr
 
     return totalLoss / len(usr2itemsIndx)
-        
+                
 # get coverage 
 #   covreage = find the last one's position (ranked by predicted probability)
 #   we may assume 0 1 | 1 0 0:   prob pos(1) >= prob pos(0); prob pos(2) >= prob pos(3), prob pos(2) >= prob pos(4),
 #             pos 0 1   2 3 4 
 #   but have no other knowledge, so 'sort by prob' would just have: 1 1 0 0 0 (i.e. doesnt change its original ordery)
 #                                                                   1 2 0 3 4
-def getCoverage(W, V, usr2itemsIndx, usr2NonzeroCols, pooler):
-    totalFields = 1.0 * USR_TOTAL_LABELS_FIELDS
+def getCoverage(W, V, usr2itemsIndx, usr2NonzeroCols, u2predictions, totalLabelsNum):
+    totalFields = 1.0 * totalLabelsNum
     colNums = len( next(usr2NonzeroCols.itervalues()) )
     loss = 0.0
     for usrid in usr2itemsIndx:
         y_nonzeroCols = usr2NonzeroCols[usrid]
-
-        # predict the most possible cols' combination
-        usr_rep = pooler.pool_all(usr2itemsIndx[usrid], V)
-        bestCols = predictLabels(usr_rep, W)
+        bestCols = u2predictions[usrid]
            
         # rank by prob (start from 0): i.e. lowest prob => bigger rank number
         lowestOneRank = colNums - 1
+        print colNums, bestCols, y_nonzeroCols
         for cnt in range(0, colNums):
             ind = colNums - 1 - cnt
             if bestCols[ind] > y_nonzeroCols[ind]:
@@ -212,25 +186,21 @@ def getCoverage(W, V, usr2itemsIndx, usr2NonzeroCols, pooler):
         loss += lowestOneRank / totalFields
 
     return loss / len(usr2itemsIndx)
-
-
+        
 # get average precision 
 #   we may assume 0 1 | 1 0 0:   prob pos(1) >= prob pos(0); prob pos(2) >= prob pos(3), prob pos(2) >= prob pos(4),
 #             pos 0 1   2 3 4
 #   since we still dont have each field's prob
 #     so 'sort by prob' would just have: 1 1 0 0 0 (i.e. doesnt change its original ordery)
 #                                        1 2 0 3 4
-def getAvgPrecision(W, V, usr2itemsIndx, usr2NonzeroCols, pooler):
+def getAvgPrecision(W, V, usr2itemsIndx, usr2NonzeroCols, u2predictions):
     colNums = len( next(usr2NonzeroCols.itervalues()) )
     prec = 0.0
     for usrid in usr2itemsIndx:
         y_nonzeroCols = usr2NonzeroCols[usrid]
-
-        # predict the most possible cols' combination
-        usr_rep = pooler.pool_all(usr2itemsIndx[usrid], V)
-        bestCols = predictLabels(usr_rep, W)
+        bestCols = u2predictions[usrid]
            
-        # each 'one' has a value: (its reverse pos + 1 in 'ones' by prob) / (its reverse pos + 1 in all fields by prob)
+        # each 'real one' has a value: (its reverse pos + 1 in 'ones' by prob) / (its reverse pos + 1 in all fields by prob)
         #                              ^^ i.e. higher porb has lowe pos
         col2AllRank = {}
         score = 0.0 
@@ -255,15 +225,12 @@ def getAvgPrecision(W, V, usr2itemsIndx, usr2NonzeroCols, pooler):
 #   we may assume 0 1 | 1 0 0:  pred 
 #                 1 0 | 0 1 0:  real 
 #   since the papaer itself doesnt specify, we use pred XOR(by attribute) real (i.e. 1 | 1 => hamming loss (for this): 2/2)
-def getHammingLoss(W, V, usr2itemsIndx, usr2NonzeroCols, pooler):
+def getHammingLoss(W, V, usr2itemsIndx, usr2NonzeroCols, u2predictions):
     colNums = len( next(usr2NonzeroCols.itervalues()) )
     loss = 0.0
     for usrid in usr2itemsIndx:
         y_nonzeroCols = usr2NonzeroCols[usrid]
-
-        # predict the most possible cols' combination
-        usr_rep = pooler.pool_all(usr2itemsIndx[usrid], V)
-        bestCols = predictLabels(usr_rep, W)
+        bestCols = u2predictions[usrid]
            
         dataPointLoss = 0.0
         for ind, val in enumerate(bestCols):
@@ -276,25 +243,26 @@ def getHammingLoss(W, V, usr2itemsIndx, usr2NonzeroCols, pooler):
 
 
 # just print the result
-def printTruePredicted(W, V, usr2itemsIndx, usr2NonzeroCols, pooler):
+def printTruePredicted(W, V, usr2itemsIndx, usr2NonzeroCols, u2predictions):
     print '[info]: usrid, actual, predicted'
     for usrid in usr2itemsIndx:
-        usr_rep = pooler.pool_all(usr2itemsIndx[usrid], V)
         y_nonzeroCols = usr2NonzeroCols[usrid]
-
-        # predict the most possible cols' combination
-        bestCols = predictLabels(usr_rep, W)
-
+        bestCols = u2predictions[usrid]
         print usrid, y_nonzeroCols, bestCols
 
 
-# pick the 1st 10% as valid data
+# XXX I guess Scipy has 'splitTrainTest'
+# XXX n-fold tests?
+# Pick the random 10% as valid data
 def splitTrainTest(usr2itemsIndx):
     totalUsrs = len(usr2itemsIndx)
     cnt = 0
     usr2itemsIndx_train = {}
     usr2itemsIndx_valid = {}
-    for usr in usr2itemsIndx:
+    usrKeys = usr2itemsIndx.keys()
+    random.shuffle(usrKeys)
+    for usr in usrKeys:
+	# XXX not fixed
         if cnt > totalUsrs * 0.1:
             usr2itemsIndx_train[usr] = usr2itemsIndx[usr]
         else:
@@ -303,7 +271,8 @@ def splitTrainTest(usr2itemsIndx):
 
     return usr2itemsIndx_train, usr2itemsIndx_valid
 
-# formulate avg loss
+# XXX employ ndarray op???
+# Formulate avg loss
 def getAvgLoss(W, V, usr2NonzeroCols, usr2negsNonzeroCols, usr2itemsIndx, pooler):
     loss = 0.0
     cnt = 0
@@ -333,7 +302,9 @@ def getAvgLoss(W, V, usr2NonzeroCols, usr2negsNonzeroCols, usr2itemsIndx, pooler
             cnt += 0
     return loss/cnt
 
-# get sampled (by usr) loss (cause getAvgLoss is pretty slow)
+# XXX employ ndarray op???
+# Get sampled (by usr) loss 
+# - Cauz getAvgLoss is SLOW
 def getSampledLoss(W, V, usr2NonzeroCols, usr2negsNonzeroCols, usr2itemsIndx, pooler, sampleSize = 10):
     loss = 0.0
     usrs = list(usr2itemsIndx.keys())
@@ -360,7 +331,7 @@ def getSampledLoss(W, V, usr2NonzeroCols, usr2negsNonzeroCols, usr2itemsIndx, po
         loss += usrloss
     return loss
 
-# return gradsOfW w.r.t. the user
+# Return gradsOfW w.r.t. the user
 ''' y_nonzeroCols:    usr's y's nonzero cols ''' 
 ''' sigmoid_y:        sigmoid(-v * summedW_y ) ''' 
 ''' usr_rep:          usr's representation vector ''' 
@@ -418,8 +389,8 @@ def getTerms(usrid, usr2labels, usr2NonzeroCols, usr2itemsIndx, W, usr_rep, usr2
     return y, y_nonzeroCols, itemsIndx, sumedW_y, sigmoid_y, y_negsNonzeroCols, sumedW_negs, sigmoids_negs, sigmoidedSumedW
    
 def main(argv):
-    if not len(argv) == 1:
-        print '[info] usage: python run.py yourtraindata'
+    if len(argv) != 1:
+        print '[info] usage: python sne_lab.py randomSeed(int)'
         return 1
     
     ''' load each usr's BOI (and for valid data) ''' 
@@ -434,8 +405,8 @@ def main(argv):
     #    1: [1,2],
     #  }
     # Rmk: the part for 'filtering rating >= 3' is done in file
-    dataloader = dataloader_movielens100k.dataloader_movielens100k()
-    usr2itemsIndx, ind2itemNum = dataloader.load(argv[0])
+    dataloader = ENLoader(rating_file = '../data/ego-net/107.edges.u2u', usr2labels_file = '../data/ego-net/107.circles.u2f')
+    usr2itemsIndx, ind2itemNum = dataloader.load()
     usrs = map(lambda usr: usr, usr2itemsIndx)
     usr2itemsIndx, usr2itemsIndx_valid = splitTrainTest(usr2itemsIndx)
     print '[info] usr2itemsIndx, usr2itemsIndx_valid loaded'
@@ -453,8 +424,8 @@ def main(argv):
     #   0: [2, 3],
     #   1: [0, 4],
     # }
-    usr2labels = dataloader.get_labels('data/usrAgeGenOccu', usrs)
-    usr2NonzeroCols = dataloader.get_nonZeroCols('data/usrAgeGenOccu')
+    usr2labels = dataloader.get_labels(usrs)
+    usr2NonzeroCols = dataloader.get_nonZeroCols()
     print '[info] usr2labels, usr2NonzeroCols loaded'
     
 
@@ -474,7 +445,7 @@ def main(argv):
     # Warn: assume ITEM_FIELDS_NUM is the same after usr's representation's dimension
     totalLabelsNum = dataloader.gettotalLabelsNum()
     W = 2 * np.random.rand(ITEM_FIELDS_NUM, totalLabelsNum) -1
-    pooler = sample_pooler.sample_pooler()
+    pooler = sample_pooler()
     print '[info] W & pooler inited, W.shape == ', W.shape, '== (itemFeatures length, total labels num)'
     debug('W', W)
     debug('V', V)
@@ -490,7 +461,7 @@ def main(argv):
     t            = 0
     incrInd      = False
     #while t <= MAX_TRAIN_NUM:
-    while microF1Valid < 0.5 and t <= MAX_TRAIN_NUM:
+    while microF1Valid < 1.0 and t <= MAX_TRAIN_NUM:
         t += 1
         print '\n[info] ######################## '
         print '[info] run == ', t
@@ -528,50 +499,61 @@ def main(argv):
             # update gradients to W, V
             W, V = updateByGradients(W, V, gradsOfW, gradsOfV, incrInd)
 
-            if usrid % 20 == 0:
-                print '[info] usr', usrid, 'l2 norm of gradsOfW == ', np.linalg.norm(gradsOfW)
+        if t % 10 == 0:
+            #if t % 1000 == 0:
+            #    avgloss = getAvgLoss(W, V, usr2NonzeroCols, usr2negsNonzeroCols, usr2itemsIndx, pooler)
+            #    lossDiff = avgloss - prevAvgLoss 
+            #    prevAvgLoss = avgloss
+            #    print '[info] at run == ', t
+            #    print '[info] avgloss == ', avgloss, '(only for train -- since this requires samples)'
+            #    print '[info] delta loss == ', lossDiff
+            #print '[info] W[:,0] == ', W[:, 0]
+            #print '[info] V == ', V
 
-        if t % 5 == 0:
-            avgloss = getAvgLoss(W, V, usr2NonzeroCols, usr2negsNonzeroCols, usr2itemsIndx, pooler)
-            lossDiff = avgloss - prevAvgLoss 
-            prevAvgLoss = avgloss
-            print '[info] at run == ', t
-            print '[info] avgloss == ', avgloss, '(only for train -- since this requires samples)'
-            print '[info] delta loss == ', lossDiff
-            print '[info] W[:,0] == ', W[:, 0]
-            print '[info] V == ', V
+            print '[info] Start predicting Train/Valid, time == ', strftime("%Y-%m-%d %H:%M:%S", gmtime())
+            u2predictionsTrain = {}
+            u2predictionsValid = {}
+            for usrid in usr2itemsIndx:
+                usr_rep = pooler.pool_all(usr2itemsIndx[usrid], V)
+                bestCols = predictLabels(usr_rep, W, dataloader.getBds())
+                u2predictionsTrain[usrid] = bestCols
+            for usrid in usr2itemsIndx_valid:
+                usr_rep = pooler.pool_all(usr2itemsIndx_valid[usrid], V)
+                bestCols = predictLabels(usr_rep, W, dataloader.getBds())
+                u2predictionsValid[usrid] = bestCols
 
-        # check performance by microF1, oneError
-        microF1Train = getMicroF1ByCol(W, V, usr2itemsIndx, usr2NonzeroCols, pooler)
-        microF1Valid = getMicroF1ByCol(W, V, usr2itemsIndx_valid, usr2NonzeroCols, pooler)
-        oneErrorTrain = getOneError(W, V, usr2itemsIndx, usr2NonzeroCols, pooler)
-        oneErrorValid = getOneError(W, V, usr2itemsIndx_valid, usr2NonzeroCols, pooler)
-        RLTrain = getRL(W, V, usr2itemsIndx, usr2NonzeroCols, pooler)
-        RLValid = getRL(W, V, usr2itemsIndx_valid, usr2NonzeroCols, pooler)
-        coverageTrain = getCoverage(W, V, usr2itemsIndx, usr2NonzeroCols, pooler)
-        coverageValid = getCoverage(W, V, usr2itemsIndx_valid, usr2NonzeroCols, pooler)
-        avgPrecTrain = getAvgPrecision(W, V, usr2itemsIndx, usr2NonzeroCols, pooler)
-        avgPrecValid = getAvgPrecision(W, V, usr2itemsIndx_valid, usr2NonzeroCols, pooler)
-        HLTrain = getHammingLoss(W, V, usr2itemsIndx, usr2NonzeroCols, pooler)
-        HLValid = getHammingLoss(W, V, usr2itemsIndx_valid, usr2NonzeroCols, pooler)
-        
-        print '[info] train data microF1 == ', microF1Train
-        print '[info] valid data microF1 == ', microF1Valid
-        print '[info] train data oneError == ', oneErrorTrain
-        print '[info] valid data oneError == ', oneErrorValid
-        print '[info] train data RL == ', RLTrain
-        print '[info] valid data RL == ', RLValid
-        print '[info] train data coverage == ', coverageTrain
-        print '[info] valid data coverage == ', coverageValid
-        print '[info] train data avgPrec == ', avgPrecTrain
-        print '[info] valid data avgPrec == ', avgPrecValid
-        print '[info] train data hammingLoss == ', HLTrain
-        print '[info] valid data hammingLoss == ', HLValid
+            print '[info] Start collecting stats, time == ', strftime("%Y-%m-%d %H:%M:%S", gmtime())
+            microF1Train = getMicroF1ByCol(W, V, usr2itemsIndx, usr2NonzeroCols, u2predictionsTrain, dataloader.gettotalLabelsNum())
+            microF1Valid = getMicroF1ByCol(W, V, usr2itemsIndx_valid, usr2NonzeroCols, u2predictionsValid, dataloader.gettotalLabelsNum())
+            oneErrorTrain = getOneError(W, V, usr2itemsIndx, usr2NonzeroCols, u2predictionsTrain)
+            oneErrorValid = getOneError(W, V, usr2itemsIndx_valid, usr2NonzeroCols, u2predictionsValid)
+            RLTrain = getRL(W, V, usr2itemsIndx, usr2NonzeroCols, u2predictionsTrain, dataloader.gettotalLabelsNum(), dataloader.getRLPairsCnt())
+            RLValid = getRL(W, V, usr2itemsIndx_valid, usr2NonzeroCols, u2predictionsValid, dataloader.gettotalLabelsNum(), dataloader.getRLPairsCnt())
+            coverageTrain = getCoverage(W, V, usr2itemsIndx, usr2NonzeroCols, u2predictionsTrain, dataloader.gettotalLabelsNum())
+            coverageValid = getCoverage(W, V, usr2itemsIndx_valid, usr2NonzeroCols, u2predictionsValid, dataloader.gettotalLabelsNum())
+            avgPrecTrain = getAvgPrecision(W, V, usr2itemsIndx, usr2NonzeroCols, u2predictionsTrain)
+            avgPrecValid = getAvgPrecision(W, V, usr2itemsIndx_valid, usr2NonzeroCols, u2predictionsValid)
+            HLTrain = getHammingLoss(W, V, usr2itemsIndx, usr2NonzeroCols, u2predictionsTrain)
+            HLValid = getHammingLoss(W, V, usr2itemsIndx_valid, usr2NonzeroCols, u2predictionsValid)
+            
+            print '[info] train data microF1 == ', microF1Train
+            print '[info] valid data microF1 == ', microF1Valid
+            print '[info] train data oneError == ', oneErrorTrain
+            print '[info] valid data oneError == ', oneErrorValid
+            print '[info] train data RL == ', RLTrain
+            print '[info] valid data RL == ', RLValid
+            print '[info] train data coverage == ', coverageTrain
+            print '[info] valid data coverage == ', coverageValid
+            print '[info] train data avgPrec == ', avgPrecTrain
+            print '[info] valid data avgPrec == ', avgPrecValid
+            print '[info] train data hammingLoss == ', HLTrain
+            print '[info] valid data hammingLoss == ', HLValid
+            print '[info] time == ', strftime("%Y-%m-%d %H:%M:%S", gmtime())
 
-    print '[info]: for traindata, print real vals & predicted vals ... '
-    printTruePredicted(W, V, usr2itemsIndx, usr2NonzeroCols, pooler)
-    print '[info]: for validdata, print real vals & predicted vals ... '
-    printTruePredicted(W, V, usr2itemsIndx_valid, usr2NonzeroCols, pooler)
+            print '[info]: for traindata, print real vals & predicted vals ... '
+            printTruePredicted(W, V, usr2itemsIndx, usr2NonzeroCols, u2predictionsTrain)
+            print '[info]: for validdata, print real vals & predicted vals ... '
+            printTruePredicted(W, V, usr2itemsIndx_valid, usr2NonzeroCols, u2predictionsValid)
 
 if __name__ == '__main__':
     main(sys.argv[1:])

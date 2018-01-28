@@ -1,7 +1,7 @@
 import os
 
 # modify by data format
-USR_TOTAL_LABELS_FIELDS = int(os.environ.get('USR_TOTAL_LABELS_FIELDS')) if('USR_TOTAL_LABELS_FIELDS' in os.environ) else (4 + 21 + 2) # age/occupation/gender
+#USR_TOTAL_LABELS_FIELDS = int(os.environ.get('USR_TOTAL_LABELS_FIELDS')) if('USR_TOTAL_LABELS_FIELDS' in os.environ) else (4 + 21 + 2) # age/occupation/gender
 AGES_BOUNDERIES = [17, 35, 65, 100]
 
 # for training
