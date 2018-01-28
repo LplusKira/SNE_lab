@@ -27,6 +27,7 @@ ls ${DIR}*${FeatureFE} | xargs -I{} python fixENFeatures.py {} {}${UniquserFE} {
 #### {}.${TrainFE} -> {}.${TrainFE}${RevisedTrainFE}
 ls ${DIR}*${TrainFE} | xargs -I{} cp {} {}${RevisedTrainFE}
 
+# TODO: hard-coded 'filtered'
 #### {}.${FeatureFE}.u2f -> {}.${FeatureFE}.u2f.filtered
-#ls | grep "${RevisedTrainFE}" | xargs -I{} wc -l {} > {}
+ls ${DIR}*${FeatureFE}${RevisedFeatureFE} | xargs -I{} sh -c 'cat "$1" | cut -d, -f1-35 > "$1".filtered' -- {}
 #### {}.${TrainFE}.u2u -> {}.${TrainFE}.u2u.filtered

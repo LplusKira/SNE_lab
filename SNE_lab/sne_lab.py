@@ -174,7 +174,6 @@ def getCoverage(W, V, usr2itemsIndx, usr2NonzeroCols, u2predictions, totalLabels
            
         # rank by prob (start from 0): i.e. lowest prob => bigger rank number
         lowestOneRank = colNums - 1
-        print colNums, bestCols, y_nonzeroCols
         for cnt in range(0, colNums):
             ind = colNums - 1 - cnt
             if bestCols[ind] > y_nonzeroCols[ind]:
@@ -390,8 +389,8 @@ def getTerms(usrid, usr2labels, usr2NonzeroCols, usr2itemsIndx, W, usr_rep, usr2
     return y, y_nonzeroCols, itemsIndx, sumedW_y, sigmoid_y, y_negsNonzeroCols, sumedW_negs, sigmoids_negs, sigmoidedSumedW
    
 def main(argv):
-    if len(argv) != 1:
-        print '[info] usage: python sne_lab.py randomSeed(int)'
+    if len(argv) < 1:
+        print '[info] usage: python sne_lab.py randomSeed(int) ratingFile(opt) featureFile(opt)'
         return 1
     
     ''' load each usr's BOI (and for valid data) ''' 
@@ -406,7 +405,10 @@ def main(argv):
     #    1: [1,2],
     #  }
     # Rmk: the part for 'filtering rating >= 3' is done in file
-    dataloader = ENLoader(rating_file = '../data/ego-net/107.edges.u2u', usr2labels_file = '../data/ego-net/107.circles.u2f')
+    # XXX each loader has its default file(s)
+    rating_file = argv[1] if len(argv) > 1 else '../data/ego-net/3980.edges.u2u'
+    usr2labels_file = argv[2] if len(argv) > 2 else '../data/ego-net/3980.circles.u2f.filtered'
+    dataloader = ENLoader(rating_file = rating_file, usr2labels_file = usr2labels_file)
     usr2itemsIndx, ind2itemNum = dataloader.load()
     usrs = map(lambda usr: usr, usr2itemsIndx)
     usr2itemsIndx, usr2itemsIndx_valid = splitTrainTest(usr2itemsIndx)
@@ -500,7 +502,9 @@ def main(argv):
             # update gradients to W, V
             W, V = updateByGradients(W, V, gradsOfW, gradsOfV, incrInd)
 
-        if t % 10 == 0:
+        # Time to reveal stats/predictions
+        # XXX shouldnt fixed
+        if t % 100 == 0:
             #if t % 1000 == 0:
             #    avgloss = getAvgLoss(W, V, usr2NonzeroCols, usr2negsNonzeroCols, usr2itemsIndx, pooler)
             #    lossDiff = avgloss - prevAvgLoss 
