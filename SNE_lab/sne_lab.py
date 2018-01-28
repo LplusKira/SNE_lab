@@ -12,6 +12,7 @@ from itertools import product
 np.random.seed( int(sys.argv[1]) ) # Reproducibility
 random.seed( int(sys.argv[1]) )    # Reproducibility
 
+
 # Return 1-dim ndarray by summing 'nonzeor cols' (by y) of W
 def sumOverW(W, y):
     # Ref: https://stackoverflow.com/a/8386737
@@ -535,6 +536,7 @@ def main(argv):
             avgPrecValid = getAvgPrecision(W, V, usr2itemsIndx_valid, usr2NonzeroCols, u2predictionsValid)
             HLTrain = getHammingLoss(W, V, usr2itemsIndx, usr2NonzeroCols, u2predictionsTrain)
             HLValid = getHammingLoss(W, V, usr2itemsIndx_valid, usr2NonzeroCols, u2predictionsValid)
+
             
             print '[info] train data microF1 == ', microF1Train
             print '[info] valid data microF1 == ', microF1Valid
