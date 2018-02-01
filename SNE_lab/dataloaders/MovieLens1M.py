@@ -1,9 +1,9 @@
 from Baseloader import Baseloader
-class ML100KLoader(Baseloader):
+class ML1MLoader(Baseloader):
 
     def __init__(self, rating_file, usr2labels_file):
-        super(ML100KLoader, self).__init__(rating_file, usr2labels_file)
-        self.attr_bds = [[0, 3], [4, 5], [6, 26]]
+        super(ML1MLoader, self).__init__(rating_file, usr2labels_file)
+        self.attr_bds = [[0, 6], [7, 8], [9, 29]]
 
     # The one-hot encoding boundary cols for each attribute
     def getBds(self):

@@ -1,5 +1,12 @@
-#import dataloaders.movielens100k as dataloader_movielens100k
 from dataloaders.EgoNetwork import ENLoader
+from dataloaders.MovieLens100K import ML100KLoader
+from dataloaders.MovieLens1M import ML1MLoader # ....
+DIR2DATALOADER = {  # By subdir in data/
+    'ml-100k': ML100KLoader,
+    #'yelp': XXX,
+    'ml-1m': ML1MLoader,
+    'ego-net': ENLoader,
+}
 from poolers.sample_pooler import sample_pooler
 from utils import getDistribution, negativeSample, debug
 from config import ITEM_FIELDS_NUM, MAX_TRAIN_NUM, LAMBDA, LEARNING_RATE, MOMENTUM, NEG_SAMPLE_NUM
@@ -408,7 +415,15 @@ def main(argv):
     # XXX each loader has its default file(s)
     rating_file = argv[1] if len(argv) > 1 else '../data/ego-net/3980.edges.u2u'
     usr2labels_file = argv[2] if len(argv) > 2 else '../data/ego-net/3980.circles.u2f.filtered'
-    dataloader = ENLoader(rating_file = rating_file, usr2labels_file = usr2labels_file)
+    rating_file_subdir = rating_file.split('/')[2]
+    usr2labels_file_subdir = usr2labels_file.split('/')[2]
+    if rating_file_subdir != usr2labels_file_subdir:
+        # XXX handle err
+        print "[Err] rating_file_subdir, usr2labels_file_subdir unequal:", rating_file_subdir, usr2labels_file_subdir
+        return 1
+
+    subdir = usr2labels_file_subdir
+    dataloader = DIR2DATALOADER[subdir](rating_file = rating_file, usr2labels_file = usr2labels_file)
     usr2itemsIndx, ind2itemNum = dataloader.load()
     usrs = map(lambda usr: usr, usr2itemsIndx)
     usr2itemsIndx, usr2itemsIndx_valid = splitTrainTest(usr2itemsIndx)
@@ -518,46 +533,46 @@ def main(argv):
             print '[info] Start predicting Train/Valid, time == ', strftime("%Y-%m-%d %H:%M:%S", gmtime())
             u2predictionsTrain = {}
             u2predictionsValid = {}
-            for usrid in usr2itemsIndx:
-                usr_rep = pooler.pool_all(usr2itemsIndx[usrid], V)
-                bestCols = predictLabels(usr_rep, W, dataloader.getBds())
-                u2predictionsTrain[usrid] = bestCols
+            #for usrid in usr2itemsIndx:
+            #    usr_rep = pooler.pool_all(usr2itemsIndx[usrid], V)
+            #    bestCols = predictLabels(usr_rep, W, dataloader.getBds())
+            #    u2predictionsTrain[usrid] = bestCols
             for usrid in usr2itemsIndx_valid:
                 usr_rep = pooler.pool_all(usr2itemsIndx_valid[usrid], V)
                 bestCols = predictLabels(usr_rep, W, dataloader.getBds())
                 u2predictionsValid[usrid] = bestCols
 
             print '[info] Start collecting stats, time == ', strftime("%Y-%m-%d %H:%M:%S", gmtime())
-            microF1Train = getMicroF1ByCol(W, V, usr2itemsIndx, usr2NonzeroCols, u2predictionsTrain, dataloader.gettotalLabelsNum())
+            #microF1Train = getMicroF1ByCol(W, V, usr2itemsIndx, usr2NonzeroCols, u2predictionsTrain, dataloader.gettotalLabelsNum())
             microF1Valid = getMicroF1ByCol(W, V, usr2itemsIndx_valid, usr2NonzeroCols, u2predictionsValid, dataloader.gettotalLabelsNum())
-            oneErrorTrain = getOneError(W, V, usr2itemsIndx, usr2NonzeroCols, u2predictionsTrain)
+            #oneErrorTrain = getOneError(W, V, usr2itemsIndx, usr2NonzeroCols, u2predictionsTrain)
             oneErrorValid = getOneError(W, V, usr2itemsIndx_valid, usr2NonzeroCols, u2predictionsValid)
-            RLTrain = getRL(W, V, usr2itemsIndx, usr2NonzeroCols, u2predictionsTrain, dataloader.gettotalLabelsNum(), dataloader.getRLPairsCnt())
+            #RLTrain = getRL(W, V, usr2itemsIndx, usr2NonzeroCols, u2predictionsTrain, dataloader.gettotalLabelsNum(), dataloader.getRLPairsCnt())
             RLValid = getRL(W, V, usr2itemsIndx_valid, usr2NonzeroCols, u2predictionsValid, dataloader.gettotalLabelsNum(), dataloader.getRLPairsCnt())
-            coverageTrain = getCoverage(W, V, usr2itemsIndx, usr2NonzeroCols, u2predictionsTrain, dataloader.gettotalLabelsNum())
+            #coverageTrain = getCoverage(W, V, usr2itemsIndx, usr2NonzeroCols, u2predictionsTrain, dataloader.gettotalLabelsNum())
             coverageValid = getCoverage(W, V, usr2itemsIndx_valid, usr2NonzeroCols, u2predictionsValid, dataloader.gettotalLabelsNum())
-            avgPrecTrain = getAvgPrecision(W, V, usr2itemsIndx, usr2NonzeroCols, u2predictionsTrain)
+            #avgPrecTrain = getAvgPrecision(W, V, usr2itemsIndx, usr2NonzeroCols, u2predictionsTrain)
             avgPrecValid = getAvgPrecision(W, V, usr2itemsIndx_valid, usr2NonzeroCols, u2predictionsValid)
-            HLTrain = getHammingLoss(W, V, usr2itemsIndx, usr2NonzeroCols, u2predictionsTrain)
+            #HLTrain = getHammingLoss(W, V, usr2itemsIndx, usr2NonzeroCols, u2predictionsTrain)
             HLValid = getHammingLoss(W, V, usr2itemsIndx_valid, usr2NonzeroCols, u2predictionsValid)
 
             
-            print '[info] train data microF1 == ', microF1Train
+            print '[info] train data microF1 == '#, microF1Train
             print '[info] valid data microF1 == ', microF1Valid
-            print '[info] train data oneError == ', oneErrorTrain
+            print '[info] train data oneError == '#, oneErrorTrain
             print '[info] valid data oneError == ', oneErrorValid
-            print '[info] train data RL == ', RLTrain
+            print '[info] train data RL == '#, RLTrain
             print '[info] valid data RL == ', RLValid
-            print '[info] train data coverage == ', coverageTrain
+            print '[info] train data coverage == '#, coverageTrain
             print '[info] valid data coverage == ', coverageValid
-            print '[info] train data avgPrec == ', avgPrecTrain
+            print '[info] train data avgPrec == '#, avgPrecTrain
             print '[info] valid data avgPrec == ', avgPrecValid
-            print '[info] train data hammingLoss == ', HLTrain
+            print '[info] train data hammingLoss == '#, HLTrain
             print '[info] valid data hammingLoss == ', HLValid
             print '[info] time == ', strftime("%Y-%m-%d %H:%M:%S", gmtime())
 
             print '[info]: for traindata, print real vals & predicted vals ... '
-            printTruePredicted(W, V, usr2itemsIndx, usr2NonzeroCols, u2predictionsTrain)
+            #printTruePredicted(W, V, usr2itemsIndx, usr2NonzeroCols, u2predictionsTrain)
             print '[info]: for validdata, print real vals & predicted vals ... '
             printTruePredicted(W, V, usr2itemsIndx_valid, usr2NonzeroCols, u2predictionsValid)
 

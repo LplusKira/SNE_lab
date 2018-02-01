@@ -13,7 +13,7 @@ class Baseloader(object):
         f = open(self.rating_file, 'r')
         for line in f:
             try:
-                line = line.strip().split(' ')
+                line = line.strip().split(',')
                 usr = int(line[0])
                 itemNum = int(line[1])
 
