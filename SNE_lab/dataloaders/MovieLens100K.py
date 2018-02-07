@@ -1,10 +1,10 @@
 from Baseloader import Baseloader
 from os import environ
-class ML1MLoader(Baseloader):
+class ML100KLoader(Baseloader):
 
-    def __init__(self, rating_file='../data/ml-1m/ratings.dat.filtered', usr2labels_file='../data/ml-1m/users.dat.one.filtered', sub=None):
-        super(ML1MLoader, self).__init__(rating_file, usr2labels_file, sub)
-        self.attr_bds = [[0, 6], [7, 8], [9, 29]]
+    def __init__(self, rating_file='../data/ml-100k/u.data.filtered', usr2labels_file='../data/ml-100k/u.user.one.filtered', sub=None):
+        super(ML100KLoader, self).__init__(rating_file, usr2labels_file, sub)
+        self.attr_bds = [[0, 3], [4, 5], [6, 26]]
 
         # Training config
         self.NEG_SAMPLE_NUM  = int(environ.get('NEG_SAMPLE_NUM', 1))

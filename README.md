@@ -40,18 +40,15 @@
 # ref:
   0. the dataset is from http://files.grouplens.org/datasets/movielens/ml-100k.zip
 
+NEG_SAMPLE_NUM=1 ITEM_FIELDS_NUM=100 MAX_TRAIN_NUM=25 LEARNING_RATE=0.001 MOMENTUM=1.0 LAMBDA=0.001 python -u sne_lab.py 0 5 ego-net ../data/ego-net/3980.edges.u2u ../data/ego-net/3980.circles.u2f.filtered 3980
 # TODO
 # refactoring:
-## architect
-## parser
-## weird codes suchAs totally hard-coded 'for loops'
 ## scipy/numpy usage
 ## matplot (instead of gnuplot)
 ## (after this, merge 1M yelp to master)
 # Readme: data flow
-# Do we 'really' need bisect.py?
+# test
 # liscence
-這個dataset不大 裡面有10個ego-network 每個network裡面有user和user的edge作為我們的feature 要預測user屬於哪些social cycle (也可能都不在)
 # Architecture
 ```
   wtf --> ??? --> XXX
