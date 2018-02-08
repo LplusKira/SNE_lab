@@ -14,8 +14,9 @@ from poolers.sample_pooler import sample_pooler
 from statevalidators.ENValidator import ENValidator
 from statevalidators.YTValidator import YTValidator
 from statevalidators.ML1MValidator import ML1MValidator
+from statevalidators.ML100KValidator import ML100KValidator
 DATA2VALIDATOR = {  # By subdir in data/
-    #'ml-100k': XXX,
+    'ml-100k': ML100KValidator,
     #'yelp': XXX,
     'ml-1m': ML1MValidator,
     'ego-net': ENValidator,

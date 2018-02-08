@@ -29,6 +29,7 @@ class BaseValidator(object):
         self.MAX_TRAIN_NUM = MAX_TRAIN_NUM
         self.NegSampleRun = self.MAX_TRAIN_NUM * 0.9
         self.ITEM_FIELDS_NUM = ITEM_FIELDS_NUM
+        self.createFile = False
 
         # Stats for conv
         self.t = 0
@@ -95,14 +96,14 @@ class BaseValidator(object):
 
         outFile = self.RootDir + ''.join([str(latentVarsNum), 'F', dataset])
         self.__log__(LogFlags['INFO'] + 'write to' + outFile)
-        flag = 'a' if self.curFold != 0 else 'w'  # Overwrite at first fold
+        flag = 'a' if self.curFold != 0 or self.createFile else 'w+'  # Overwrite at first fold
+        self.createFile = True
         with open(outFile, flag) as f:
-            cols = baseCols[:]
             for kpi, val in KPIs.iteritems():
+                cols = baseCols[:]
                 cols += [kpi, str(val)]
                 l = ','.join(cols) + '\n'
                 f.write(l)
-
 
     def logRealPredictedVals(self, data):
         usr2itemsIndx = data['usr2itemsIndx']

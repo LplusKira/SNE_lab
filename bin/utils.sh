@@ -14,3 +14,9 @@ function assertCurDir {
     exit 1;
   fi
 }
+
+## Rm 'unclean' dir
+function rmOldData {
+  echo "[info] Remove $1"
+  rm -rf $0
+}

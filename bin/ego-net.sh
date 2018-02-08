@@ -21,8 +21,7 @@ function renderData {
 assertCurDir $0
 
 ## Rm 'unclean' dir
-echo "[info] Remove ${DataDir}${DataSet}"
-rm -rf ${DataDir}${DataSet}
+rmOldData ${DataDir}${DataSet}
 
 ## For pulling + rendering ego-net's formatted data
 downloadURL="http://snap.stanford.edu/data/facebook.tar.gz"

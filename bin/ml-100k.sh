@@ -1,4 +1,5 @@
 #!/bin/bash
+source utils.sh
 DataSet="ml-100k"
 DataDir="../data/"
 
@@ -8,6 +9,12 @@ function renderData {
   zipFile="${DataSet}.zip"
   cd ${DataDir} && { curl -O ${downloadURL} ; unzip ${zipFile}; cd -; }
 }
+
+## Assert the execution place
+assertCurDir $0
+
+## Rm 'unclean' dir
+rmOldData ${DataDir}${DataSet}
 
 ## For pulling + rendering ml-100k's formatted data
 downloadURL="http://files.grouplens.org/datasets/movielens/${DataSet}.zip"
