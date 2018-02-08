@@ -1,4 +1,5 @@
 #!/bin/bash
+source utils.sh
 DataSet="youtube"
 DataDir="../data/"
 
@@ -17,12 +18,18 @@ function renderData {
   rm -rf ${tmpDir}
 }
 
+
+## Assert the execution place
+assertCurDir $0
+
+## Rm 'unclean' dir
+rmOldData ${DataDir}${DataSet}
+
 ## For pulling + rendering ego-net's formatted data
 downloadURL1="http://snap.stanford.edu/data/bigdata/communities/com-youtube.ungraph.txt.gz"
 downloadURL2="http://snap.stanford.edu/data/bigdata/communities/com-youtube.all.cmty.txt.gz"
 renderData ${downloadURL1} com-youtube.ungraph.txt.gz
 renderData ${downloadURL2} com-youtube.all.cmty.txt.gz
-
 
 ## Generate formatted data
 echo "[info] Generate formatted data"
