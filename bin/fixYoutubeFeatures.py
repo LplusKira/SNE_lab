@@ -12,7 +12,10 @@ def main(argv):
         try:
             usrs = l.strip().split('\t')
             for u in usrs:
-                u2f[u] = u2f.append(cnt) if u in u2f else [cnt]
+                if u in u2f:
+                    u2f[u].append(cnt)
+                else:
+                    u2f[u] = [cnt]
         except:
             # TODO: handle
             pass

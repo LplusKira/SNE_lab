@@ -66,7 +66,6 @@ def merge_two_dicts(x, y):
     z.update(y)
     return z
 
-# XXX suspicious -- really not in Math OR np?
 # Return 1 / (1 + math.exp(-x)) || 0.001
 def sigmoid(x):
     try:
