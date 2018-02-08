@@ -1,4 +1,5 @@
 #!/bin/bash
+source utils.sh
 DataSet="ego-net"
 DataDir="../data/"
 
@@ -15,6 +16,13 @@ function renderData {
   }
   rm -rf ${tmpDir}
 }
+
+## Assert the execution place
+assertCurDir $0
+
+## Rm 'unclean' dir
+echo "[info] Remove ${DataDir}${DataSet}"
+rm -rf ${DataDir}${DataSet}
 
 ## For pulling + rendering ego-net's formatted data
 downloadURL="http://snap.stanford.edu/data/facebook.tar.gz"

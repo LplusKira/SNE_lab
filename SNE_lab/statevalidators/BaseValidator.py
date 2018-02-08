@@ -131,6 +131,7 @@ class BaseValidator(object):
         self.__log__(LogFlags['INFO'] + '### time == ' + strftime("%Y-%m-%d %H:%M:%S", gmtime()))
 
     def notConv(self):
+        # MicroF1 btw [0,1]; bigger => higer precision, higer recall
         return self.microF1Valid < self.MF1Bd and self.t <= self.MAX_TRAIN_NUM
 
     def shouldNegSample(self):

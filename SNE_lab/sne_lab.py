@@ -13,10 +13,11 @@ from poolers.sample_pooler import sample_pooler
 #from statevalidators.Basevalidator import Basevalidator
 from statevalidators.ENValidator import ENValidator
 from statevalidators.YTValidator import YTValidator
+from statevalidators.ML1MValidator import ML1MValidator
 DATA2VALIDATOR = {  # By subdir in data/
     #'ml-100k': XXX,
     #'yelp': XXX,
-    #'ml-1m': XXX,
+    'ml-1m': ML1MValidator,
     'ego-net': ENValidator,
     'youtube': YTValidator,
 }
@@ -142,7 +143,6 @@ def main(argv):
 
 
         ''' learning for W, V '''
-        microF1Valid = 0.0  # <--- btw [0,1]; bigger => higer precision, higer recall
         while statevalidator.notConv():
             # Init next run
             statevalidator.nextRun()
