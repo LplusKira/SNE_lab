@@ -126,6 +126,7 @@ class Baseupdator(object):
     # ... }
     def updateByGradients(self, W, V, gradsOfW, gradsOfV, incrInd):
         scale = self.MOMENTUM if incrInd else 1/self.MOMENTUM
+        print scale
         W -= scale * self.LEARNING_RATE * gradsOfW
         for itemInd in gradsOfV:
             V[itemInd, :] -= scale * self.LEARNING_RATE * gradsOfV[itemInd]
@@ -135,7 +136,8 @@ class Baseupdator(object):
     def predictLabels(self, usr_rep, W, bds):
         bestCols = map(lambda v: v[0], bds)
         bestScore = usr_rep.transpose().dot( sumOverW(W, bestCols) )
-        allCombs = list(product( *bds ))
+        bdsRanges = [range(bd[0], bd[1] + 1) for bd in bds]
+        allCombs = list(product( *bdsRanges ))
         for comb in allCombs:
             y_nonzeroCols_sample = list(comb)
             sumedW = sumOverW(W, y_nonzeroCols_sample)
