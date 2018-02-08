@@ -126,7 +126,6 @@ class Baseupdator(object):
     # ... }
     def updateByGradients(self, W, V, gradsOfW, gradsOfV, incrInd):
         scale = self.MOMENTUM if incrInd else 1/self.MOMENTUM
-        print scale
         W -= scale * self.LEARNING_RATE * gradsOfW
         for itemInd in gradsOfV:
             V[itemInd, :] -= scale * self.LEARNING_RATE * gradsOfV[itemInd]
