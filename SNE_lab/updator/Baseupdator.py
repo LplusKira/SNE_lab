@@ -3,7 +3,7 @@ from itertools import product
 import numpy as np
 from sys import path
 path.append('../')  # To import utils funcs
-import math
+import math, random
 
 # Update/get loss, model params, current predictions statelessly
 class Baseupdator(object):
