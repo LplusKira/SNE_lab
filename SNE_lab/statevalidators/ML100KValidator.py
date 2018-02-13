@@ -5,7 +5,6 @@ class ML100KValidator(BaseValidator):
 
         # Customized params
         self.setRuns(RevealRun=1000, CalLossRun=1000, cb=self.setCalLossRun)
-        self.microF1Valid = 0.4
         self.NegSampleFreq = 5
 
     def setRuns(self, RevealRun, CalLossRun, cb):

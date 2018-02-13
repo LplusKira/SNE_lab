@@ -5,7 +5,6 @@ class ML1MValidator(BaseValidator):
 
         # Customized params
         setRuns(RevealRun=500, CalLossRun=500, cb=setCalLossRun)
-        self.microF1Valid = 0.5
         self.NegSampleFreq = 5
 
     def setRuns(self, RevealRun, CalLossRun, cb):

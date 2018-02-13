@@ -8,6 +8,7 @@ from math import fabs
 class BaseValidator(object):
     MF1Bd = 1.0
     LossDiffBd = 1e-6
+    LossDiffNegBd = LossDiffBd * 10
     EnoughRuns = 100
     NegSampleFreq = 100
     RevealRun = 10
@@ -33,11 +34,10 @@ class BaseValidator(object):
 
         # Stats for conv
         self.t = 0
-        self.microF1Valid = 0.0  # In [0,1]; bigger <=> higer precision, recall
 
         # Stats for debugging
-        self.avgloss = float('inf')
-        self.prevAvgLoss = float('inf')
+        self.loss = float('inf')
+        self.prevLoss = float('inf')
         self.lossDiff = float('inf')
 
         # Optimization configs
@@ -59,9 +59,9 @@ class BaseValidator(object):
             for sample in usr2NegativeSamples[usrid]:
                 print ' ', sample
 
-    def logLossStates(self, W, V, avgloss):
+    def logLossStates(self, W, V, loss):
         self.__log__(LogFlags['INFO'] + 'at run == ' + str(self.t))
-        self.__log__(LogFlags['INFO'] + 'avgloss (only for train -- since this requires samples) == ' + str(avgloss))
+        self.__log__(LogFlags['INFO'] + 'loss (only for train -- since this requires samples) == ' + str(loss))
         self.__log__(LogFlags['INFO'] + 'loss diff == ' + str(self.lossDiff))
         self.__log__(LogFlags['INFO'] + 'W[:,0] == ' + str(W[:, 0]))
         self.__log__(LogFlags['INFO'] + 'V == ' + str(V))
@@ -133,13 +133,13 @@ class BaseValidator(object):
 
     def notConv(self):
         # MicroF1 btw [0,1]; bigger => higer precision, higer recall
-        return self.microF1Valid < self.MF1Bd and self.t <= self.MAX_TRAIN_NUM
+        return fabs(self.lossDiff) > self.LossDiffBd and self.t <= self.MAX_TRAIN_NUM
 
     def shouldNegSample(self):
         # Cond1: many runs and long way to go
         # Cond2: |loss' diff| small (perhaps local min)
         return (self.t >= self.EnoughRuns and self.t == self.NegSampleRun) or \
-               (fabs(self.lossDiff) < self.LossDiffBd and self.t % self.NegSampleFreq == 0)
+               (fabs(self.lossDiff) < self.LossDiffNegBd and self.t % self.NegSampleFreq == 0)
 
     def shouldRevealStats(self):
         return self.t % self.RevealRun == 0
@@ -147,10 +147,10 @@ class BaseValidator(object):
     def shouldCalLoss(self):
         return self.t % self.CalLossRun == 0
 
-    def updateLossState(self, avgloss):
-        self.avgloss = avgloss
-        self.lossDiff = self.avgloss - self.prevAvgLoss 
-        self.prevAvgLoss = self.avgloss
+    def updateLossState(self, loss):
+        self.loss = loss
+        self.lossDiff = self.loss - self.prevLoss 
+        self.prevLoss = self.loss
 
     def shouldPredictTrain(self):
         return self.predictTrain
