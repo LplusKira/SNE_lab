@@ -13,7 +13,6 @@ class BaseValidator(object):
     NegSampleFreq = 100
     RevealRun = 10
     CalLossRun = 1000
-    initTime = time()  # In secs
     RootDir='../report/'
 
     def __init__(self, dataset, datasetSub, curFold, totalFolds, usr2itemsIndxTrain, usr2itemsIndxValid, MAX_TRAIN_NUM, ITEM_FIELDS_NUM, silence=False, predictTrain=False, write2File=True):
@@ -31,6 +30,7 @@ class BaseValidator(object):
         self.NegSampleRun = self.MAX_TRAIN_NUM * 0.9
         self.ITEM_FIELDS_NUM = ITEM_FIELDS_NUM
         self.createFile = False
+        self.initTime = time()  # In secs
 
         # Stats for conv
         self.t = 0
@@ -82,16 +82,17 @@ class BaseValidator(object):
             self.__log__(s)
 
     def writeCSVStats(self, data):
-        # Format: dataset, latentVarsNum, fold, curRun, spentTime, train/valid, metric, val
+        # Format: dataset, latentVarsNum, fold, curRun, curFoldspentTime, lossDiff, train/valid, metric, val
         dataset = self.dataset + self.datasetSub if self.datasetSub else self.dataset
         latentVarsNum = self.ITEM_FIELDS_NUM
         fold = self.curFold
         curRun = self.t
-        spentTime = int(time() - self.initTime)  # In secs
+        curFoldspentTime = int(time() - self.initTime)  # In secs
+        lossDiff = self.lossDiff if self.shouldCalLoss() else None
         splitDataName = data['name']
         baseCols = [dataset, latentVarsNum, fold, curRun,
-            spentTime, splitDataName] 
-        baseCols = [str(s) for s in baseCols]
+            curFoldspentTime, lossDiff, splitDataName] 
+        baseCols = [str(ele) for ele in baseCols]
         KPIs = data['KPIs']
 
         outFile = self.RootDir + ''.join([str(latentVarsNum), 'F', dataset])
