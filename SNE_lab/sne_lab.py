@@ -213,7 +213,7 @@ def main(argv):
             if statevalidator.shouldRevealStats():
                 # Cal loss if needed
                 if statevalidator.shouldCalLoss():
-                    avgloss = baseupdator.getAvgLoss(
+                    loss = baseupdator.getLoss(
                         W, 
                         V, 
                         usr2NonzeroCols, 
@@ -221,8 +221,8 @@ def main(argv):
                         usr2itemsIndxTrain, 
                         pooler,
                     )
-                    statevalidator.updateLossState(avgloss)
-                    statevalidator.logLossStates(W, V, avgloss)
+                    statevalidator.updateLossState(loss)
+                    statevalidator.logLossStates(W, V, loss)
 
                 # Do predictions
                 statevalidator.logStartPrediction()
