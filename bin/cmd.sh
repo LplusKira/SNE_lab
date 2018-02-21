@@ -13,7 +13,7 @@ if [ "$1" = "ego" ]; then
   FoldNum="5"
   MAX_TRAIN_NUM="1000"
   cd ${MAINDIR} && {
-    for tag in 348 1912; do
+    for tag in 348 1912 0 107 1684 3980 414 686 698 3437; do
       for featNum in 100 200 300 400; do
         # Would 'roughly' run four processes (by featNum)
         if [ "${featNum}" -ne "400" ]; then

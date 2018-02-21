@@ -66,6 +66,7 @@ def merge_two_dicts(x, y):
     z.update(y)
     return z
 
+# XXX ret 0; handle in codes?
 # Return 1 / (1 + math.exp(-x)) || 0.001
 def sigmoid(x):
     try:
