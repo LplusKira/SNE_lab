@@ -20,6 +20,9 @@ function renderData {
 ## Assert the execution place
 assertCurDir $0
 
+## Add ${DataDir} if not existent
+mkdir -p ${DataDir}
+
 ## Rm 'unclean' dir
 rmOldData ${DataDir}${DataSet}
 

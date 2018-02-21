@@ -7,11 +7,19 @@ function renderData {
   echo "[info] Download + unzip dataset"
   downloadURL=$1
   zipFile="${DataSet}.zip"
-  cd ${DataDir} && { curl -O ${downloadURL} ; unzip ${zipFile}; cd -; }
+  cd ${DataDir} && { 
+    curl -O ${downloadURL}; 
+    unzip ${zipFile}; 
+    rm ${zipFile}; 
+    cd -; 
+  }
 }
 
 ## Assert the execution place
 assertCurDir $0
+
+## Add ${DataDir} if not existent
+mkdir -p ${DataDir}
 
 ## Rm 'unclean' dir
 rmOldData ${DataDir}${DataSet}
