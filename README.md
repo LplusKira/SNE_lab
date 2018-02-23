@@ -5,22 +5,22 @@ bash cmd.sh data
 ```
 
 # Run:
-- MovieLens100K, 5-folds cv
+- MovieLens100K, 5-fold cv
 ```
 NEG_SAMPLE_NUM=1 ITEM_FIELDS_NUM=100 MAX_TRAIN_NUM=8000 LEARNING_RATE=0.001 MOMENTUM=1.0 LAMBDA=0.001 nohup python -u sne_lab.py 0 5 ml-100k
 ```
 
-- MovieLens1M, 5-folds cv
+- MovieLens1M, 5-fold cv
 ```
 NEG_SAMPLE_NUM=1 ITEM_FIELDS_NUM=100 MAX_TRAIN_NUM=1000 LEARNING_RATE=0.001 MOMENTUM=1.0 LAMBDA=0.001 nohup python -u sne_lab.py 0 5 ml-1m
 ```
 
-- Youtube, 5-folds cv
+- Youtube, 5-fold cv
 ```
 NEG_SAMPLE_NUM=1 ITEM_FIELDS_NUM=100 MAX_TRAIN_NUM=2000 LEARNING_RATE=0.001 MOMENTUM=1.0 LAMBDA=0.001 nohup python -u sne_lab.py 0 5 youtube
 ```
 
-- Ego-net (Facebook)'s network#348, 5-folds cv
+- Ego-net (Facebook)'s network#348, 5-fold cv
 ```
 NEG_SAMPLE_NUM=1 ITEM_FIELDS_NUM=100 MAX_TRAIN_NUM=1000 LEARNING_RATE=0.005 MOMENTUM=1.0 LAMBDA=0.001 nohup python -u sne_lab.py 0 5 ego-net rating_file="../data/ego-net/348.edges.u2u" usr2labels_file="../data/ego-net/348.circles.u2f.filtered" sub=348
 ```
@@ -73,13 +73,13 @@ Will record statistics (rawFile) to report/ and log current status to stdout
 3. [Graph Data](http://snap.stanford.edu/data/bigdata/communities/com-youtube.ungraph.txt.gz) and [Community Data](http://snap.stanford.edu/data/bigdata/communities/com-youtube.all.cmty.txt.gz) for youtube
 
 # TODO:
-## 'TODO' or 'XXX' in files
-## Refactoring
-- scipy/numpy usage
-- Add matplot
-- Save/Load model
-- exception handling in shell scripts
-## Liscence
-## Linting
-## Better test
-## 'Bot' notification for remanining run time
+- 'XXX' in files
+- Refactoring
+1. Add matplot
+2. Save/Load model
+3. exception handling in shell scripts
+- Liscence
+- Linting
+- Better test
+- 'Bot' notification for remanining run time
+
