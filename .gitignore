@@ -2,3 +2,4 @@
 *.swp
 report/*
 data/*
+.DS_Store
