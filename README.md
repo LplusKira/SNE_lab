@@ -83,3 +83,15 @@ Will record statistics (rawFile) to report/ and log current status to stdout
 - Better test
 - 'Bot' notification for remanining run time
 
+# Moral:
+- Should have independent logger
+- Use 'legit' names (e.g. pseudoSigmoid VS sigmoid) 
+- 'Drawbacks' of using environ vars to pass arguments (e.g. when examine process from sys command)
+
+# TL;DR:
+- Try this simple one first
+```
+pip install -r requirements.txt
+bash cmd.sh data
+NEG_SAMPLE_NUM=1 ITEM_FIELDS_NUM=10 MAX_TRAIN_NUM=10 LEARNING_RATE=0.001 MOMENTUM=1.0 LAMBDA=0.001 python sne_lab.py 0 5 ml-100k
+```
