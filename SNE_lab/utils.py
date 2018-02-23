@@ -66,13 +66,18 @@ def merge_two_dicts(x, y):
     z.update(y)
     return z
 
-# XXX ret 0; handle in codes?
+# Warn: 
+#   This 'sigmoid' is 'pseudo sigmoid'
+#   It returns 0.001 when x is extremely small
+#   It was meant to handle exposion such as log(sigmoid(x)); but, it's a bad design
+#   Implement your own if needed!
 # Return 1 / (1 + math.exp(-x)) || 0.001
 def sigmoid(x):
     try:
         return 1 / (1 + math.exp(-x))
     except:
-        # Only exception: x << 0 => exp(-x) explodes
+        # Calculation exception: x << 0 => exp(-x) explodes
+        # Will at most requires two SIGKILLs here 
         return 0.001
 
 # Return 1-dim ndarray by summing 'nonzeor cols' (by y) of W
@@ -83,7 +88,9 @@ def sumOverW(W, y):
     return Wn.sum(axis=1)   
 
 
-# ref(how to cal microf1): http://rushdishams.blogspot.tw/2011/08/micro-and-macro-average-of-precision.html
+# Get microF1
+#   - see ref
+# ref (how to cal micro1): http://rushdishams.blogspot.tw/2011/08/micro-and-macro-average-of-precision.html
 def getMicroF1ByCol(args):
     W = args['W'] 
     V = args['V']
@@ -142,8 +149,8 @@ def getMicroF1ByCol(args):
     microF1        = 2 * microPrecision * microRecall / (microPrecision + microRecall) if(summedTp > 0) else 0.0
     return microF1
 
-# get one error
-#   one error = sum( has one class hits or not ) / dataPointsNum
+# Get one error
+#   - sum( has one class hits or not ) / dataPointsNum
 def getOneError(args):
     W = args['W'] 
     V = args['V']
@@ -163,9 +170,16 @@ def getOneError(args):
                 break
     return errCnt / float(usrCnt)
 
-# get RL (ranking loss)
-#   it's .. (0,1) pair's examination 
-# TODO: may modify the way this calculates .. inefficient now
+# Get RL (ranking loss)
+#   - examine each (0,1) pair's order in its corresponding sorted(by prob) in prediction
+'''
+Notice for 'sort by probability's adaptation in SNE:
+  Example 0 1 | 1 0 0:   prob pos(1) >= prob pos(0); prob pos(2) >= prob pos(3), prob pos(2) >= prob pos(4),
+    - pos 0 1   2 3 4 
+  Since no further knowledge given, so 'sort by prob' would just render (by stable sort): 
+    - 1 1 0 0 0
+    - 1 2 0 3 4 (pos)
+'''
 def getRL(args):
     W = args['W'] 
     V = args['V']
@@ -206,12 +220,16 @@ def getRL(args):
 
     return totalLoss / len(usr2itemsIndx)
                 
-# get coverage 
-#   covreage = find the last one's position (ranked by predicted probability)
-#   we may assume 0 1 | 1 0 0:   prob pos(1) >= prob pos(0); prob pos(2) >= prob pos(3), prob pos(2) >= prob pos(4),
-#             pos 0 1   2 3 4 
-#   but have no other knowledge, so 'sort by prob' would just have: 1 1 0 0 0 (i.e. doesnt change its original ordery)
-#                                                                   1 2 0 3 4
+# Get coverage 
+#   - find the last one's position (ranked by predicted probability)
+'''
+Notice for 'sort by probability's adaptation in SNE:
+  Example 0 1 | 1 0 0:   prob pos(1) >= prob pos(0); prob pos(2) >= prob pos(3), prob pos(2) >= prob pos(4),
+    - pos 0 1   2 3 4 
+  Since no further knowledge given, so 'sort by prob' would just render (by stable sort): 
+    - 1 1 0 0 0
+    - 1 2 0 3 4 (pos)
+'''
 def getCoverage(args):
     W = args['W'] 
     V = args['V']
@@ -242,12 +260,15 @@ def getCoverage(args):
 
     return loss / len(usr2itemsIndx)
         
-# get average precision 
-#   we may assume 0 1 | 1 0 0:   prob pos(1) >= prob pos(0); prob pos(2) >= prob pos(3), prob pos(2) >= prob pos(4),
-#             pos 0 1   2 3 4
-#   since we still dont have each field's prob
-#     so 'sort by prob' would just have: 1 1 0 0 0 (i.e. doesnt change its original ordery)
-#                                        1 2 0 3 4
+# Get average precision 
+'''
+Notice for 'sort by probability's adaptation in SNE:
+  Example 0 1 | 1 0 0:   prob pos(1) >= prob pos(0); prob pos(2) >= prob pos(3), prob pos(2) >= prob pos(4),
+    - pos 0 1   2 3 4 
+  Since no further knowledge given, so 'sort by prob' would just render (by stable sort): 
+    - 1 1 0 0 0
+    - 1 2 0 3 4 (pos)
+'''
 def getAvgPrecision(args):
     W = args['W'] 
     V = args['V']
@@ -282,10 +303,13 @@ def getAvgPrecision(args):
                 
     return prec / len(usr2itemsIndx)
 
-# get  hamming loss
-#   we may assume 0 1 | 1 0 0:  pred 
-#                 1 0 | 0 1 0:  real 
-#   since the papaer itself doesnt specify, we use pred XOR(by attribute) real (i.e. 1 | 1 => hamming loss (for this): 2/2)
+# Get hamming loss
+#   - explain by an example
+'''
+Example 0 1 | 1 0 0:  pred 
+        1 0 | 0 1 0:  real 
+We use pred XOR (by attribute) real; thus, hamming loss for this is 2/2
+'''
 def getHammingLoss(args):
     W = args['W'] 
     V = args['V']
