@@ -4,7 +4,6 @@ from dataloaders.MovieLens100K import ML100KLoader
 from dataloaders.MovieLens1M import ML1MLoader
 DATA2LOADER = {  # By subdir in data/
     'ml-100k': ML100KLoader,
-    #'yelp': XXX,
     'ml-1m': ML1MLoader,
     'ego-net': ENLoader,
     'youtube': YTLoader,
@@ -17,7 +16,6 @@ from statevalidators.ML1MValidator import ML1MValidator
 from statevalidators.ML100KValidator import ML100KValidator
 DATA2VALIDATOR = {  # By subdir in data/
     'ml-100k': ML100KValidator,
-    #'yelp': XXX,
     'ml-1m': ML1MValidator,
     'ego-net': ENValidator,
     'youtube': YTValidator,
@@ -95,17 +93,16 @@ def main(argv):
     ''' Init Baseupdator '''
     baseupdator = Baseupdator(*dataloader.getTrainingConf())
 
-    # XXX check: every op needed in fold
     ''' K-fold validation '''
     kfolds = splitKfolds(usr2itemsIndx, foldNum)
     for ind, fold in enumerate(kfolds):
-        # Init folds
+        # Init train/valid folds
         usr2itemsIndxValid = fold
-        # XXX too verbose, elestic way?
         usr2itemsIndxTrain = {}
         for tind, tfold in enumerate(kfolds):
             if ind != tind:
                 usr2itemsIndxTrain = merge_two_dicts(usr2itemsIndxTrain, tfold)
+
         # Init statevalidator
         statevalidator = DATA2VALIDATOR[dataset](
             dataset = dataset,
@@ -133,7 +130,8 @@ def main(argv):
 
 
         ''' init W to [-1, 1); init pooler'''
-        # Warn: assume ITEM_FIELDS_NUM is the same after usr's representation's dimension
+        # Warn: assume ITEM_FIELDS_NUM is the same as usr's representation's dimension 
+        # (No dimension reduction in pooler!)
         totalLabelsNum = dataloader.gettotalLabelsNum()
         W = 2 * nprandom.rand(ITEM_FIELDS_NUM, totalLabelsNum) -1
         pooler = sample_pooler()
@@ -142,7 +140,7 @@ def main(argv):
         statevalidator.debug('V', V)
 
 
-        ''' learning for W, V '''
+        ''' learn W, V '''
         while statevalidator.notConv():
             # Init next run
             statevalidator.nextRun()
@@ -163,7 +161,6 @@ def main(argv):
                 usr_rep = pooler.pool_all(usr2itemsIndxTrain[usrid], V)
 
                 # Get y, sumedW(for y AND negs), sigmoids(for y AND negs)
-                # Warn: assume all usrs have all labels
                 y, y_nonzeroCols, itemsIndx, sumedW_y, sigmoid_y, \
                 y_negsNonzeroCols, sumedW_negs, sigmoids_negs, \
                 sigmoidedSumedW = baseupdator.getTerms(
@@ -176,7 +173,6 @@ def main(argv):
                     usr2negsNonzeroCols,
                 )
 
-                # Warn: update W by usr, not by epoch 
                 # Get gradient of Wq (i.e. q-th column of W)
                 gradsOfW = baseupdator.getGradsOfW(
                     W, 
@@ -187,10 +183,7 @@ def main(argv):
                     y_negsNonzeroCols,
                 )
                 
-                # Warn: update V by usr, not by epoch 
-                # Get gradient of Vitem, itemInd in X(usrid) 
-                # Warn: only average poooling for now
-                #   gradVect3, and gradVect4 happen to hold the same values over all items in this case
+                # Get gradient of Vitem 
                 gradsOfV = baseupdator.getGradsOfV(
                     V, 
                     itemsIndx, 
@@ -199,6 +192,7 @@ def main(argv):
                     sigmoidedSumedW,
                 )
 
+                # Update W, V by usr, not by epoch 
                 # Update gradients to W, V
                 W, V = baseupdator.updateByGradients(
                     W, 
@@ -208,7 +202,7 @@ def main(argv):
                     statevalidator.incrInd,
                 )
 
-            # Time to reveal stats/predictions
+            # Reveal stats/predictions
             if statevalidator.shouldRevealStats():
                 # Cal loss if needed
                 if statevalidator.shouldCalLoss():
@@ -259,7 +253,7 @@ def main(argv):
                         'rlPairsCnt': dataloader.getRLPairsCnt(),
                     }
                     d['KPIs'] = { kpi: getter(KPIArgs) for kpi, getter in KPI2getters.iteritems() }
-                    #statevalidator.logStats(d)
+                    # OR (no write): statevalidator.logStats(d)
                     statevalidator.writeCSVStats(d)
 
                 # Log real, predicted
