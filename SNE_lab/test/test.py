@@ -1,11 +1,14 @@
 import sys, math, random
 sys.path.append('../')
+sys.path.append('../../')
 import unittest
 import numpy as np
+import os, errno
 
 import poolers.sample_pooler as sample_pooler
 from utils import sumOverW, sigmoid, getMicroF1ByCol, getOneError, getRL, getCoverage, getAvgPrecision, getHammingLoss, getDistribution, negativeSample
 from updator.Baseupdator import Baseupdator
+from config import TEST_DIR
 
 class TestRun(unittest.TestCase):
     # Validate pooler 
@@ -706,6 +709,82 @@ class TestRun(unittest.TestCase):
             for comb in actualDict:
                 self.assertEqual(math.fabs(actualDict[comb] - expectDict[usr][comb]) < 40, True)
 
+    # Validate training overal results
+    def test_negativeSample(self):
+        def getTests(splits):
+            splits[5] = round(float(splits[5]), 3)
+            splits[8] = round(float(splits[8]), 3)
+            tests = splits[:4] + splits[6:]
+            return tests
+
+        def clean(f, d):
+            # Should be exactly one file under testdir
+            os.remove(f)
+            os.rmdir(d)
+
+        try:
+            # Try make test dir
+            # Ref: https://stackoverflow.com/a/273227/9326078
+            testdir = '../../' + TEST_DIR
+            os.makedirs(testdir)
+        except OSError as e:
+            if e.errno != errno.EEXIST:
+                raise e
+
+        try:
+            # Execute by shell with TEST_SNE on
+            testFieldsNum = '10'
+            testTrainNum = '10'
+            testFoldNum = '2'
+            testDataSet = 'ml-100k'
+            execStr = ' '.join(['SILENCE_SNE=1 TEST_SNE=1 NEG_SAMPLE_NUM=1',\
+                'ITEM_FIELDS_NUM=' + testFieldsNum, \
+                'MAX_TRAIN_NUM=' + testTrainNum, \
+                'LEARNING_RATE=0.001 MOMENTUM=1.0 LAMBDA=0.001 python sne_lab.py 0', \
+                testFoldNum, \
+                testDataSet])
+            expectedExecStr = 'SILENCE_SNE=1 TEST_SNE=1 NEG_SAMPLE_NUM=1 ITEM_FIELDS_NUM=10 MAX_TRAIN_NUM=10 LEARNING_RATE=0.001 MOMENTUM=1.0 LAMBDA=0.001 python sne_lab.py 0 2 ml-100k'
+            self.assertEqual(execStr, expectedExecStr)
+            os.system('cd ../ && ' + execStr)
+
+            # Read rawFile (output) by 1st rows
+            rawFile = testdir + testFieldsNum + 'F' + testDataSet
+            numRows = 12
+            lines = []
+            with open(rawFile, 'r') as f:
+                for r in range(numRows):
+                    lines.append(f.readline().strip())
+
+            # Compare rawFile with expectations by 1st rows
+            expectedLines = [
+                'ml-100k,10,0,5,13,-inf,valid,avgPrec,0.428933552301',
+                'ml-100k,10,0,5,13,-inf,valid,microF1,0.302966101695',
+                'ml-100k,10,0,5,13,-inf,valid,coverage,0.603656622724',
+                'ml-100k,10,0,5,13,-inf,valid,hammingLoss,0.697033898305',
+                'ml-100k,10,0,5,13,-inf,valid,RL,0.267802495292',
+                'ml-100k,10,0,5,13,-inf,valid,oneError,0.300847457627',
+                'ml-100k,10,0,10,26,-0.80961487441,valid,avgPrec,0.428429113238',
+                'ml-100k,10,0,10,26,-0.80961487441,valid,microF1,0.302259887006',
+                'ml-100k,10,0,10,26,-0.80961487441,valid,coverage,0.603656622724',
+                'ml-100k,10,0,10,26,-0.80961487441,valid,hammingLoss,0.697740112994',
+                'ml-100k,10,0,10,26,-0.80961487441,valid,RL,0.267949623352',
+                'ml-100k,10,0,10,26,-0.80961487441,valid,oneError,0.300847457627',
+            ]
+            for ind, l in enumerate(lines):
+                splitsExp = expectedLines[ind].split(',')
+                splitsAct = l.split(',')
+                testsExp = getTests(splitsExp)
+                testsAct = getTests(splitsAct)
+                self.assertEqual(testsExp, testsAct)
+        except:
+            # Del rawFile and TEST_DIR
+            clean(rawFile, testdir)
+            raise
+
+        # Del rawFile and TEST_DIR
+        clean(rawFile, testdir)
+
+        
 
 if __name__ == '__main__':
     unittest.main()

@@ -22,7 +22,7 @@ DATA2VALIDATOR = {  # By subdir in data/
 }
 from updator.Baseupdator import Baseupdator
 from utils import getDistribution, negativeSample, splitKfolds, merge_two_dicts, getMicroF1ByCol, getOneError, getRL, getCoverage, getAvgPrecision, getHammingLoss
-from config import LogFlags
+from config import LogFlags, SILENCE_SNE
 
 import math, random, sys, traceback
 from numpy import random as nprandom
@@ -113,6 +113,7 @@ def main(argv):
             usr2itemsIndxValid = usr2itemsIndxValid,
             MAX_TRAIN_NUM = MAX_TRAIN_NUM,
             ITEM_FIELDS_NUM = ITEM_FIELDS_NUM,
+            silence = SILENCE_SNE,
         )
         statevalidator.logFoldInfo()
         
@@ -259,6 +260,7 @@ def main(argv):
                 # Log real, predicted
                 for d in dataStats:
                     statevalidator.logRealPredictedVals(d)
+    return 1
 
 if __name__ == '__main__':
     main(sys.argv[:])

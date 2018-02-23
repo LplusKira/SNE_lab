@@ -1,7 +1,7 @@
 from sys import path
 path.append('../')
 from time import strftime, gmtime, time
-from config import LogFlags, DEBUG
+from config import LogFlags, DEBUG, TEST_SNE, TEST_DIR
 from math import fabs
 
 ''' By-fold state handler '''
@@ -13,7 +13,7 @@ class BaseValidator(object):
     NegSampleFreq = 100
     RevealRun = 10
     CalLossRun = 1000
-    RootDir='../report/'
+    RootDir = '../report/' if not TEST_SNE else '../' + TEST_DIR
 
     def __init__(self, dataset, datasetSub, curFold, totalFolds, usr2itemsIndxTrain, usr2itemsIndxValid, MAX_TRAIN_NUM, ITEM_FIELDS_NUM, silence=False, predictTrain=False, write2File=True):
         self.dataset = dataset
@@ -116,7 +116,7 @@ class BaseValidator(object):
         for usrid in usr2itemsIndx:
             y_nonzeroCols = usr2NonzeroCols[usrid]
             bestCols = u2predictions[usrid]
-            print usrid, y_nonzeroCols, bestCols
+            self.__log__(' '.join([str(usrid), str(y_nonzeroCols), str(bestCols)]))
 
     def debug(self, msg, val):
         if self.DEBUG:
