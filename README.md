@@ -30,16 +30,19 @@ NEG_SAMPLE_NUM=1 ITEM_FIELDS_NUM=100 MAX_TRAIN_NUM=1000 LEARNING_RATE=0.005 MOME
 ```
 bash genStats.sh ml-100k|ml-1m|youtube|ego-net348 foldNum
 ```
-- Optional: gnuplot for quick visualization
+- Optional: gnuplot for quick visualization from rawFile
 ```
-bash cmd.sh train|valid ml-100k|ml-1m|youtube|ego-net348
+bash cmd.sh train|valid rawFile [avgPrec|microF1|coverage|hammingLoss|RL|oneError] [featNum]
 ```
+[Check definition of rawFile](https://github.com/LplusKira/SNE_lab#inout-format)
 
 # Structure:
 - For model, please refer to [Your Cart tells You: Inferring Demographic Attributes from Purchase Data](https://github.com/LplusKira/SNE_lab/blob/master/doc/WSDM2016_wang.pdf)
 - For codes' architecture
 ```
-  dataloader     loads data and keeps respective dependencies ->
+  dataloader     loads data and keeps respective dependencies
+  |
+  V
   statevalidator handles the process of training (data-dependent)
   |
   V
@@ -60,8 +63,8 @@ Rules:
 
 The corresponding shell scripts in bin/ handles the transformation of raw data to the designated formatted data. For example, ego-net.sh handles the generation of the formatted files for ego-net's datasets.
 
-Will record statistics to report/ and log current status to stdout
-Report file format is depicted in statevalidator
+Will record statistics (rawFile) to report/ and log current status to stdout
+'rawFile' format is depicted in statevalidator
 
 # Ref:
 0. [Dataset](http://files.grouplens.org/datasets/movielens/ml-100k.zip) for ml-100k
