@@ -2,10 +2,11 @@ from utils import sigmoid, sumOverW
 from itertools import product
 import numpy as np
 from sys import path
-path.append('../')  # To import utils funcs
+path.append('../')  # To import utils(funcs)/config
 import math, random
 from multiprocessing import Process, Queue
 from Queue import Empty
+from config import LogFlags
 
 # Update/get loss, model params, current predictions statelessly
 class Baseupdator(object):
@@ -23,11 +24,10 @@ class Baseupdator(object):
 
     # Would try to use 'getAvgLoss' at the very first time
     # - 'costs too much time' -- will use getSampledLoss for all
-    # XXX handle logging part
     def getLoss(self, W, V, usr2NonzeroCols, usr2negsNonzeroCols, usr2itemsIndx, pooler):
         def terminateP(p):
             if p.is_alive():
-                print '[info] Main will close p'
+                print LogFlags['INFO'] + 'Main will close child process for getLoss'
                 p.terminate()
 
         def putFuncRet2Q(f, args, q):
@@ -41,25 +41,24 @@ class Baseupdator(object):
         p = Process(target=putFuncRet2Q, args=(f, fArgs, q))
         p.start()
         try:
-            print '[info] Start collecting loss from', f.__name__
+            print LogFlags['INFO'] + 'Start collecting loss from', f.__name__
             loss = q.get(block=True, timeout=self.getLossTimeLimit)
             p.join()
             q.close()
             return loss
         except Empty as e:
-            print '[info] Queue empty (Avg-loss collection will stop)'
+            print LogFlags['INFO'] + 'Queue empty (Avg-loss collection will stop)'
             terminateP(p)
             self.useSampleLoss = True
             q.close()
             return self.getLoss(W, V, usr2NonzeroCols, usr2negsNonzeroCols, usr2itemsIndx, pooler)
         except:
-            print '[error] Unexpected error'
+            print LogFlags['ERR'] + 'Unexpected error'
             terminateP(p)
             q.close()
             return self.getLoss(W, V, usr2NonzeroCols, usr2negsNonzeroCols, usr2itemsIndx, pooler)
 
     
-        
     # XXX employ ndarray op???
     # Formulate avg loss
     def getAvgLoss(self, W, V, usr2NonzeroCols, usr2negsNonzeroCols, usr2itemsIndx, pooler):
