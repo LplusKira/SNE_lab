@@ -90,8 +90,7 @@ def main(argv):
         raise Exception(s)
 
     ''' Acquire (for all usrs) usr2labels & usr2NonzeroCols ''' 
-    usr2labels = dataloader.get_labels(usrs)
-    usr2NonzeroCols = dataloader.get_nonZeroCols()
+    usr2labels, usr2NonzeroCols = dataloader.get_labels(usrs)
 
     ''' Init Baseupdator '''
     baseupdator = Baseupdator(*dataloader.getTrainingConf())
