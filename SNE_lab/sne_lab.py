@@ -9,7 +9,6 @@ DATA2LOADER = {  # By subdir in data/
     'youtube': YTLoader,
 }
 from poolers.sample_pooler import sample_pooler
-#from statevalidators.Basevalidator import Basevalidator
 from statevalidators.ENValidator import ENValidator
 from statevalidators.YTValidator import YTValidator
 from statevalidators.ML1MValidator import ML1MValidator
