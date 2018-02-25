@@ -95,8 +95,7 @@ Will record statistics (rawFile) to report/ and log current status to stdout
 # TODO:
 - 'XXX' in files
 - Refactoring (matplot, save/load model, exception handling in shell scripts)
-- Liscence
-- Linting
+- Linting (by flake8)
 - Better test
 - 'Bot' notification for remanining run time
 
@@ -105,9 +104,10 @@ Will record statistics (rawFile) to report/ and log current status to stdout
 - Use 'legit' names (e.g. pseudoSigmoid VS sigmoid) 
 - 'Drawbacks' of using environ vars to pass arguments (e.g. when examine process from sys command)
 - 'Never' push data/report/something huge
+- Use linting as early as possible
 
 # TL;DR:
-- Try this simple one first: Will generate 10Fml-100k under report/
+- Try this simple one first: Will generate __10Fml-100k__ under report/
 ```
 pip install -r requirements.txt
 cd bin/; bash cmd.sh data; cd -;
