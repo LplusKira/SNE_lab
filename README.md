@@ -1,38 +1,58 @@
 # Install:
 ```
 pip install -r requirements.txt
-bash cmd.sh data
+cd bin/; bash cmd.sh data; cd -;
 ```
 
 # Run:
 - MovieLens100K, 5-fold cv
 ```
-NEG_SAMPLE_NUM=1 ITEM_FIELDS_NUM=100 MAX_TRAIN_NUM=8000 LEARNING_RATE=0.001 MOMENTUM=1.0 LAMBDA=0.001 nohup python -u sne_lab.py 0 5 ml-100k
+cd SNE_lab/; \
+NEG_SAMPLE_NUM=1 ITEM_FIELDS_NUM=100 MAX_TRAIN_NUM=8000 \
+LEARNING_RATE=0.001 MOMENTUM=1.0 LAMBDA=0.001 \
+nohup python -u sne_lab.py 0 5 ml-100k; \
+cd -;
 ```
 
 - MovieLens1M, 5-fold cv
 ```
-NEG_SAMPLE_NUM=1 ITEM_FIELDS_NUM=100 MAX_TRAIN_NUM=1000 LEARNING_RATE=0.001 MOMENTUM=1.0 LAMBDA=0.001 nohup python -u sne_lab.py 0 5 ml-1m
+cd SNE_lab/; \
+NEG_SAMPLE_NUM=1 ITEM_FIELDS_NUM=100 MAX_TRAIN_NUM=1000 \
+LEARNING_RATE=0.001 MOMENTUM=1.0 LAMBDA=0.001 \
+nohup python -u sne_lab.py 0 5 ml-1m; \
+cd -;
 ```
 
 - Youtube, 5-fold cv
 ```
-NEG_SAMPLE_NUM=1 ITEM_FIELDS_NUM=100 MAX_TRAIN_NUM=2000 LEARNING_RATE=0.001 MOMENTUM=1.0 LAMBDA=0.001 nohup python -u sne_lab.py 0 5 youtube
+cd SNE_lab/; \
+NEG_SAMPLE_NUM=1 ITEM_FIELDS_NUM=100 MAX_TRAIN_NUM=2000 \
+LEARNING_RATE=0.001 MOMENTUM=1.0 LAMBDA=0.001 \
+nohup python -u sne_lab.py 0 5 youtube; \
+cd -;
 ```
 
 - Ego-net (Facebook)'s network#348, 5-fold cv
 ```
-NEG_SAMPLE_NUM=1 ITEM_FIELDS_NUM=100 MAX_TRAIN_NUM=1000 LEARNING_RATE=0.005 MOMENTUM=1.0 LAMBDA=0.001 nohup python -u sne_lab.py 0 5 ego-net rating_file="../data/ego-net/348.edges.u2u" usr2labels_file="../data/ego-net/348.circles.u2f.filtered" sub=348
+cd SNE_lab/; \
+NEG_SAMPLE_NUM=1 ITEM_FIELDS_NUM=100 MAX_TRAIN_NUM=1000 \
+LEARNING_RATE=0.005 MOMENTUM=1.0 LAMBDA=0.001 \
+nohup python -u sne_lab.py 0 5 ego-net rating_file="../data/ego-net/348.edges.u2u" usr2labels_file="../data/ego-net/348.circles.u2f.filtered" sub=348; \
+cd -
 ```
 
 # Examine:
 - Render report & raw stats in .csv
 ```
-bash genStats.sh ml-100k|ml-1m|youtube|ego-net348 foldNum
+cd bin/; \
+bash genStats.sh ml-100k|ml-1m|youtube|ego-net348 foldNum; \
+cd -;
 ```
 - Optional: gnuplot for quick visualization from rawFile
 ```
-bash cmd.sh train|valid rawFile [avgPrec|microF1|coverage|hammingLoss|RL|oneError] [featNum]
+cd bin/; \
+bash cmd.sh train|valid rawFile [avgPrec|microF1|coverage|hammingLoss|RL|oneError] [featNum]; \
+cd -
 ```
 [Check definition of rawFile](https://github.com/LplusKira/SNE_lab#inout-format)
 
@@ -74,10 +94,7 @@ Will record statistics (rawFile) to report/ and log current status to stdout
 
 # TODO:
 - 'XXX' in files
-- Refactoring
-1. Add matplot
-2. Save/Load model
-3. exception handling in shell scripts
+- Refactoring (matplot, save/load model, exception handling in shell scripts)
 - Liscence
 - Linting
 - Better test
@@ -87,11 +104,16 @@ Will record statistics (rawFile) to report/ and log current status to stdout
 - Should have independent logger
 - Use 'legit' names (e.g. pseudoSigmoid VS sigmoid) 
 - 'Drawbacks' of using environ vars to pass arguments (e.g. when examine process from sys command)
+- 'Never' push data/report/something huge
 
 # TL;DR:
 - Try this simple one first: Will generate 10Fml-100k under report/
 ```
 pip install -r requirements.txt
-bash cmd.sh data
-NEG_SAMPLE_NUM=1 ITEM_FIELDS_NUM=10 MAX_TRAIN_NUM=10 LEARNING_RATE=0.001 MOMENTUM=1.0 LAMBDA=0.001 python sne_lab.py 0 2 ml-100k
+cd bin/; bash cmd.sh data; cd -;
+cd SNE_lab/; \
+NEG_SAMPLE_NUM=1 ITEM_FIELDS_NUM=10 MAX_TRAIN_NUM=10 \
+LEARNING_RATE=0.001 MOMENTUM=1.0 LAMBDA=0.001 \
+python sne_lab.py 0 2 ml-100k; \
+cd -;
 ```
