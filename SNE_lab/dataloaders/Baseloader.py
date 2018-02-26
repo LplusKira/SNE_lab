@@ -2,7 +2,10 @@ from sys import path
 path.append('../')  # To get config from previous layer
 from config import LogFlags
 
+
 class Baseloader(object):
+    '''Dataset-specific rating_file and usr2labels_file loader
+    '''
     def __init__(self, rating_file, usr2labels_file, sub=None, silence=False):
         self.rating_file = rating_file
         self.usr2labels_file = usr2labels_file
@@ -12,12 +15,12 @@ class Baseloader(object):
             print self.__str__()
 
         # For training (default template)
-        self.NEG_SAMPLE_NUM  = 10
+        self.NEG_SAMPLE_NUM = 10
         self.ITEM_FIELDS_NUM = 2
-        self.MAX_TRAIN_NUM   = 10
-        self.LEARNING_RATE   = 1E-4  # Update by (1 OR 1/MOMENTUM) * LEARNING_RATE * gradient
-        self.MOMENTUM        = 2.0
-        self.LAMBDA          = 1E-3
+        self.MAX_TRAIN_NUM = 10
+        self.LEARNING_RATE = 1E-4  # Update by (1 OR 1/MOMENTUM) * LEARNING_RATE * gradient
+        self.MOMENTUM = 2.0
+        self.LAMBDA = 1E-3
 
     # Get description of loaded data
     def getDataSub(self):
@@ -52,7 +55,7 @@ class Baseloader(object):
                 itemIndx = itemsList.index(itemNum)
             else:
                 itemsList.append(itemNum)
-            
+
             # Append item's 'indx' to usr's bag
             usr2itemsIndx[usr].append(itemIndx)
         f.close()
@@ -81,8 +84,8 @@ class Baseloader(object):
             usr = int(line[0])
             if usr in usrs:
                 # Get one-hot attributes
-                usr2labels[usr] = [int(e) for i, e in enumerate(line[1:])] 
-                usr2nonZeroCols[usr] = [i for i, e in enumerate(line[1:]) if int(e) != 0] 
+                usr2labels[usr] = [int(e) for i, e in enumerate(line[1:])]
+                usr2nonZeroCols[usr] = [i for i, e in enumerate(line[1:]) if int(e) != 0]
         fd.close()
         self.__log__(LogFlags['INFO'] + 'usr2labels and usr2NonzeroCols loaded')
         return usr2labels, usr2nonZeroCols
@@ -94,8 +97,8 @@ class Baseloader(object):
 
     def __repr__(self):
         return "{}(rating_file='{}', usr2labels_file='{}', silence={})".format(
-            self.__class__.__name__, 
-            self.rating_file, 
+            self.__class__.__name__,
+            self.rating_file,
             self.usr2labels_file,
             self.silence,
         )
@@ -104,7 +107,7 @@ class Baseloader(object):
         s = LogFlags['INFO'] + "Load BOI from '{}'\n" + \
             LogFlags['INFO'] + "Load one-hot-encoded attributes from '{}'"
         return s.format(self.rating_file, self.usr2labels_file)
-    
+
     def __log__(self, s):
         if not self.silence:
             print s
