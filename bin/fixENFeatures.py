@@ -1,50 +1,50 @@
 import sys
 
+
 def main(argv):
     featureFile = argv[0]
     uniqUsrsFile = argv[1]
     outFile = argv[2]
+
     # Load uniq usrs
+    # - raise IOError, let SIGKILL/Others be it
     allUsrs = []
-    f = open(uniqUsrsFile)
-    for l in f:
-        try:
-            l = l.strip().split(' ')
-            allUsrs.append(l[0])
-        except:
-            # TODO: implement
-            pass
-    f.close()
-    
+    try:
+        with open(uniqUsrsFile, 'r') as f:
+            for line in f:
+                line = line.strip().split(' ')
+                allUsrs.append(line[0])
+    except IOError:
+        raise
+
     # Save u2f
-    f = open(featureFile)
-    cnt = 0
+    # - raise IOError, let SIGKILL/Others be it
     u2f = {}
-    for l in f:
-        cnt += 1
-        try:
-            l = l.strip().split('\t')
-            usrs = l[1:]
-            for u in usrs:
-                if u in u2f:
-                    u2f[u].append(cnt)
-                else:
-                    u2f[u] = [cnt]
-        except:
-            # TODO: handle
-            pass
-    f.close()
-    
+    try:
+        with open(featureFile, 'r') as f:
+            for lineNum, line in enumerate(f):
+                line = line.strip().split('\t')
+                usrs = line[1:]
+                for u in usrs:
+                    u2f[u] = u2f.get(u, []) + [lineNum]
+    except IOError:
+        raise
+    else:
+        totalAttrsNum = lineNum + 1  # Since lineNum starts at 0
+
     # Write each user's one-hot encoded features
-    f = open(outFile, 'w')
-    BASE = ['0,1'] * cnt
-    for u in allUsrs:
-        code = BASE[:]
-        if u in u2f:
-            for ind in u2f[u]:
-                code[ind - 1] = '1,0'
-        f.write(u + ',' + ','.join(code) + '\n')
-    f.close()
+    # - raise IOError, let SIGKILL/Others be it
+    hasAttr, noAttr = '1,0', '0,1'
+    attrInds = range(totalAttrsNum)
+    try:
+        with open(outFile, 'w') as f:
+            for u in allUsrs:
+                usrAttrInds = u2f.get(u, [])
+                codes = [hasAttr if ind in usrAttrInds else noAttr for ind in attrInds]
+                f.write(u + ',' + ','.join(codes) + '\n')
+    except IOError:
+        raise
+
 
 if __name__ == '__main__':
     main(sys.argv[1:4])

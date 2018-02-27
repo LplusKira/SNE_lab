@@ -1,4 +1,6 @@
 import sys
+
+
 def encodeAge(s):
     age = s
     if age == '1':
@@ -20,36 +22,41 @@ def encodeAge(s):
 def encodeGender(c):
     return '1,0' if c == 'M' else '0,1'
 
+
 def getOccupationDict():
     size = 21
     return {str(v): (v * '0,' + '1,' + (size - v - 1) * '0,').strip(',') for v in range(size)}
 
+
 def encodeOccupation(s, d):
     return d[s]
+
 
 def main(argv):
     featureFile = argv[0]
     outFile = argv[1]
-    
+
     # Save u2f
-    f = open(featureFile)
     occupationDict = getOccupationDict()
     u2f = {}
-    for l in f:
-        # Spec in ml-100k data's readme
-        l = l.strip().split('::')
-        usr = l[0] 
-        gender = encodeGender(l[1])
-        age = encodeAge(l[2])
-        occupation = encodeOccupation(l[3], occupationDict)
-        u2f[usr] = ','.join([usr, age, gender, occupation])
-    f.close()
-    
+    try:
+        with open(featureFile, 'r') as f:
+            for line in f:
+                # Ref: ml-1m data's readme
+                line = line.strip().split('::')
+                usr = line[0]
+                gender = encodeGender(line[1])
+                age = encodeAge(line[2])
+                occupation = encodeOccupation(line[3], occupationDict)
+                u2f[usr] = ','.join([usr, age, gender, occupation])
+    except IOError:
+        raise
+
     # Write each user's one-hot encoded features
-    f = open(outFile, 'w')
-    for u in u2f:
-        f.write(u2f[u] + '\n')
-    f.close()
+    with open(outFile, 'w') as f:
+        for u in u2f:
+            f.write(u2f[u] + '\n')
+
 
 if __name__ == '__main__':
     main(sys.argv[1:3])
