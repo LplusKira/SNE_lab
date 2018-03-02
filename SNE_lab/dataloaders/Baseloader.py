@@ -1,6 +1,4 @@
-from sys import path
-path.append('../')  # To get config from previous layer
-from config import LogFlags
+import logging
 
 
 class Baseloader(object):
@@ -12,7 +10,7 @@ class Baseloader(object):
         self.sub = sub  # Subtitle of (rating_file, usr2labels_file) comb
         self.silence = silence
         if not silence:
-            print self.__str__()
+            logging.info(self.__str__())
 
         # For training (default template)
         self.NEG_SAMPLE_NUM = 10
@@ -61,10 +59,10 @@ class Baseloader(object):
         f.close()
 
         ind2ItemNum = {k: v for v, k in enumerate(itemsList)}
-        self.__log__(LogFlags['INFO'] + 'usr2itemsIndx loaded')
+        logging.info('usr2itemsIndx loaded')
         return usr2itemsIndx, ind2ItemNum
 
-    ## Return each usr's labels/nonzeroCols from 'usrs'
+    # Return each usr's labels/nonzeroCols from 'usrs'
     # sample:
     # usr2labels = {
     #   0: [0,0,1, 1,0],
@@ -87,7 +85,7 @@ class Baseloader(object):
                 usr2labels[usr] = [int(e) for i, e in enumerate(line[1:])]
                 usr2nonZeroCols[usr] = [i for i, e in enumerate(line[1:]) if int(e) != 0]
         fd.close()
-        self.__log__(LogFlags['INFO'] + 'usr2labels and usr2NonzeroCols loaded')
+        logging.info('usr2labels and usr2NonzeroCols loaded')
         return usr2labels, usr2nonZeroCols
 
     def gettotalLabelsNum(self):
@@ -104,8 +102,8 @@ class Baseloader(object):
         )
 
     def __str__(self):
-        s = LogFlags['INFO'] + "Load BOI from '{}'\n" + \
-            LogFlags['INFO'] + "Load one-hot-encoded attributes from '{}'"
+        s = "Load BOI from '{}'\n" + \
+            "Load one-hot-encoded attributes from '{}'"
         return s.format(self.rating_file, self.usr2labels_file)
 
     def __log__(self, s):

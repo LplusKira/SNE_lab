@@ -1,6 +1,4 @@
-import sys
 import numpy as np
-sys.path.insert(0, '../')
 
 
 class sample_pooler:

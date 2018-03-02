@@ -1,8 +1,10 @@
+from time import time
+from math import fabs
+import logging
 from sys import path
 path.append('../')
-from time import strftime, gmtime, time
-from config import LogFlags, DEBUG, TEST_SNE, TEST_DIR
-from math import fabs
+from config import TEST_SNE, TEST_DIR
+
 
 ''' By-fold state handler '''
 class BaseValidator(object):
@@ -15,17 +17,15 @@ class BaseValidator(object):
     CalLossRun = 1000
     RootDir = '../report/' if not TEST_SNE else '../' + TEST_DIR
 
-    def __init__(self, dataset, datasetSub, curFold, totalFolds, usr2itemsIndxTrain, usr2itemsIndxValid, MAX_TRAIN_NUM, ITEM_FIELDS_NUM, silence=False, predictTrain=False, write2File=True):
+    def __init__(self, dataset, datasetSub, curFold, totalFolds, usr2itemsIndxTrain, usr2itemsIndxValid, MAX_TRAIN_NUM, ITEM_FIELDS_NUM, predictTrain=False, write2File=True):
         self.dataset = dataset
         self.datasetSub = datasetSub
         self.curFold = curFold
         self.totalFolds = totalFolds
         self.usr2itemsIndxTrain = usr2itemsIndxTrain
         self.usr2itemsIndxValid = usr2itemsIndxValid
-        self.silence = silence # For showing process status
         self.predictTrain = predictTrain
         self.write2File = write2File
-        self.DEBUG = DEBUG # For numeric debugging
         self.MAX_TRAIN_NUM = MAX_TRAIN_NUM
         self.NegSampleRun = self.MAX_TRAIN_NUM * 0.9
         self.ITEM_FIELDS_NUM = ITEM_FIELDS_NUM
@@ -44,42 +44,42 @@ class BaseValidator(object):
         self.incrInd = False
 
     def logFoldInfo(self):
-        self.__log__(LogFlags['INFO'] + '(curFold, totalFolds) = ' + str(self.curFold) + ',' + str(self.totalFolds))
-        self.__log__(LogFlags['INFO'] + 'usrs in train: ' + str(len(self.usr2itemsIndxTrain)))
-        self.__log__(LogFlags['INFO'] + 'usrs in valid: ' + str(len(self.usr2itemsIndxValid)))
+        logging.info('(curFold, totalFolds) = ' + str(self.curFold) + ',' + str(self.totalFolds))
+        logging.info('usrs in train: ' + str(len(self.usr2itemsIndxTrain)))
+        logging.info('usrs in valid: ' + str(len(self.usr2itemsIndxValid)))
 
     def logStartNegSample(self):
-        self.__log__(LogFlags['INFO'] + 'resample usr negative samples')
+        logging.info('resample usr negative samples')
 
     def logNegSampleInfo(self, usr2NegativeSamples):
-        self.__log__(LogFlags['INFO'] + 'diff' + str(self.lossDiff))
-        self.__log__(LogFlags['INFO'] + 'usr2NegativeSamples: ')
+        logging.info('diff' + str(self.lossDiff))
+        logging.info('usr2NegativeSamples: ')
+        # XXX formatted output, perhaps?
         for usrid in usr2NegativeSamples:
             print usrid
             for sample in usr2NegativeSamples[usrid]:
                 print ' ', sample
 
     def logLossStates(self, W, V, loss):
-        self.__log__(LogFlags['INFO'] + 'at run == ' + str(self.t))
-        self.__log__(LogFlags['INFO'] + 'loss (only for train -- since this requires samples) == ' + str(loss))
-        self.__log__(LogFlags['INFO'] + 'loss diff == ' + str(self.lossDiff))
-        self.__log__(LogFlags['INFO'] + 'W[:,0] == ' + str(W[:, 0]))
-        self.__log__(LogFlags['INFO'] + 'V == ' + str(V))
+        logging.info('loss (only for train -- since this requires samples) == ' + str(loss))
+        logging.info('loss diff == ' + str(self.lossDiff))
+        logging.debug('W[:,0] == ' + str(W[:, 0]))
+        logging.debug('V == ' + str(V))
 
     def logStartPrediction(self):
-        self.__log__(LogFlags['INFO'] + 'start predicting, time == ' + strftime("%Y-%m-%d %H:%M:%S", gmtime()))
+        logging.info('start predicting')
         if not self.predictTrain:
-            self.__log__(LogFlags['INFO'] + 'will NOT predict on train data')
+            logging.info('will NOT predict on train data')
 
     def logCollectingStats(self):
-        self.__log__(LogFlags['INFO'] + 'Start collecting stats, time == ' + strftime("%Y-%m-%d %H:%M:%S", gmtime()))
+        logging.info('Start collecting stats')
 
     def logStats(self, data):
         name = data['name']
         KPIs = data['KPIs']
         for kpi, val in KPIs.iteritems():
-            s = LogFlags['INFO'] + ' '.join([name, 'data', kpi, '==', str(val)])
-            self.__log__(s)
+            s = ' '.join([name, 'data', kpi, '==', str(val)])
+            logging.info(s)
 
     def writeCSVStats(self, data):
         # Format: dataset, latentVarsNum, fold, curRun, curFoldspentTime, lossDiff, train/valid, metric, val
@@ -91,46 +91,37 @@ class BaseValidator(object):
         lossDiff = self.lossDiff if self.shouldCalLoss() else None
         splitDataName = data['name']
         baseCols = [dataset, latentVarsNum, fold, curRun,
-            curFoldspentTime, lossDiff, splitDataName] 
+                    curFoldspentTime, lossDiff, splitDataName]
         baseCols = [str(ele) for ele in baseCols]
         KPIs = data['KPIs']
 
         outFile = self.RootDir + ''.join([str(latentVarsNum), 'F', dataset])
-        self.__log__(LogFlags['INFO'] + 'write to' + outFile)
+        logging.info('write to' + outFile)
         flag = 'a' if self.curFold != 0 or self.createFile else 'w+'  # Overwrite at first fold
         self.createFile = True
         with open(outFile, flag) as f:
             for kpi, val in KPIs.iteritems():
                 cols = baseCols[:]
                 cols += [kpi, str(val)]
-                l = ','.join(cols) + '\n'
-                f.write(l)
+                line = ','.join(cols) + '\n'
+                f.write(line)
 
     def logRealPredictedVals(self, data):
         usr2itemsIndx = data['usr2itemsIndx']
         usr2NonzeroCols = data['usr2NonzeroCols']
         u2predictions = data['u2predictions']
         name = data['name']
-        self.__log__(LogFlags['INFO'] + ' '.join(['for', name, 'data, print real vals & predicted vals ... ']))
-        self.__log__(LogFlags['INFO'] + 'usrid, actual, predicted')
+        logging.info(' '.join(['for', name, 'data, print real vals & predicted vals ... ']))
+        logging.info('usrid, actual, predicted')
         for usrid in usr2itemsIndx:
             y_nonzeroCols = usr2NonzeroCols[usrid]
             bestCols = u2predictions[usrid]
-            self.__log__(' '.join([str(usrid), str(y_nonzeroCols), str(bestCols)]))
-
-    def debug(self, msg, val):
-        if self.DEBUG:
-            self.__log__(LogFlags['INFO'] + ' '.join([msg, str(val)]))
-
-    def __log__(self, s):
-        if not self.silence:
-            print s
+            logging.info(' '.join([str(usrid), str(y_nonzeroCols), str(bestCols)]))
 
     # States-related funcs
     def nextRun(self):
         self.t += 1
-        self.__log__(LogFlags['INFO'] + '### run == ' + str(self.t))
-        self.__log__(LogFlags['INFO'] + '### time == ' + strftime("%Y-%m-%d %H:%M:%S", gmtime()))
+        logging.info('run == ' + str(self.t))
 
     def notConv(self):
         # MicroF1 btw [0,1]; bigger => higer precision, higer recall
@@ -150,7 +141,7 @@ class BaseValidator(object):
 
     def updateLossState(self, loss):
         self.loss = loss
-        self.lossDiff = self.loss - self.prevLoss 
+        self.lossDiff = self.loss - self.prevLoss
         self.prevLoss = self.loss
 
     def shouldPredictTrain(self):
