@@ -100,7 +100,7 @@ Will record statistics (rawFile) to report/ and log current status to stdout
 - 'Bot' notification for remanining run time
 
 # Moral:
-- Should have independent logger
+- Use built-in module logging
 - Use 'legit' names (e.g. pseudoSigmoid VS sigmoid) 
 - 'Drawbacks' of using environ vars to pass arguments (e.g. when examine process from sys command)
 - 'Never' push data/report/something huge

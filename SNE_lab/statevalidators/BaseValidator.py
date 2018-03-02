@@ -125,7 +125,7 @@ class BaseValidator(object):
 
     def notConv(self):
         # MicroF1 btw [0,1]; bigger => higer precision, higer recall
-        return fabs(self.lossDiff) > self.LossDiffBd and self.t <= self.MAX_TRAIN_NUM
+        return fabs(self.lossDiff) > self.LossDiffBd and self.t < self.MAX_TRAIN_NUM
 
     def shouldNegSample(self):
         # Cond1: many runs and long way to go
