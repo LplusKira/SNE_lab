@@ -757,18 +757,18 @@ class TestRun(unittest.TestCase):
 
             # Compare rawFile with expectations by 1st rows
             expectedLines = [
-                'ml-100k,10,0,5,13,-inf,valid,avgPrec,0.428933552301',
-                'ml-100k,10,0,5,13,-inf,valid,microF1,0.302966101695',
-                'ml-100k,10,0,5,13,-inf,valid,coverage,0.603656622724',
-                'ml-100k,10,0,5,13,-inf,valid,hammingLoss,0.697033898305',
-                'ml-100k,10,0,5,13,-inf,valid,RL,0.267802495292',
-                'ml-100k,10,0,5,13,-inf,valid,oneError,0.300847457627',
-                'ml-100k,10,0,10,26,-0.80961487441,valid,avgPrec,0.428429113238',
-                'ml-100k,10,0,10,26,-0.80961487441,valid,microF1,0.302259887006',
-                'ml-100k,10,0,10,26,-0.80961487441,valid,coverage,0.603656622724',
-                'ml-100k,10,0,10,26,-0.80961487441,valid,hammingLoss,0.697740112994',
-                'ml-100k,10,0,10,26,-0.80961487441,valid,RL,0.267949623352',
-                'ml-100k,10,0,10,26,-0.80961487441,valid,oneError,0.300847457627',
+                'ml-100k,10,0,5,12,-inf,valid,avgPrec,0.428932896331',
+                'ml-100k,10,0,5,12,-inf,valid,microF1,0.302966101695',
+                'ml-100k,10,0,5,12,-inf,valid,coverage,0.603656622724',
+                'ml-100k,10,0,5,12,-inf,valid,hammingLoss,0.697033898305',
+                'ml-100k,10,0,5,12,-inf,valid,RL,0.267802495292',
+                'ml-100k,10,0,5,12,-inf,valid,oneError,0.300847457627',
+                'ml-100k,10,0,10,25,-0.862271360344,valid,avgPrec,0.42704965716',
+                'ml-100k,10,0,10,25,-0.862271360344,valid,microF1,0.300847457627',
+                'ml-100k,10,0,10,25,-0.862271360344,valid,coverage,0.603656622724',
+                'ml-100k,10,0,10,25,-0.862271360344,valid,hammingLoss,0.699152542373',
+                'ml-100k,10,0,10,25,-0.862271360344,valid,RL,0.268185028249',
+                'ml-100k,10,0,10,25,-0.862271360344,valid,oneError,0.305084745763',
             ]
             for ind, l in enumerate(lines):
                 splitsExp = expectedLines[ind].split(',')
@@ -783,8 +783,6 @@ class TestRun(unittest.TestCase):
 
         # Del rawFile and TEST_DIR
         clean(rawFile, testdir)
-
-        
 
 if __name__ == '__main__':
     unittest.main()
