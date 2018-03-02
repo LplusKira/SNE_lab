@@ -106,10 +106,6 @@ class Baseloader(object):
             "Load one-hot-encoded attributes from '{}'"
         return s.format(self.rating_file, self.usr2labels_file)
 
-    def __log__(self, s):
-        if not self.silence:
-            print s
-
     def getTrainingConf(self):
         return self.NEG_SAMPLE_NUM, \
             self.ITEM_FIELDS_NUM, \
