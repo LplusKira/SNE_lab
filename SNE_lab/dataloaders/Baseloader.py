@@ -5,6 +5,11 @@ class Baseloader(object):
     '''Dataset-specific rating_file and usr2labels_file loader
     '''
     def __init__(self, rating_file, usr2labels_file, sub=None, silence=False):
+        '''init Baseloader instance
+        >>> b = Baseloader('some/rating_file', 'some/usr2labels_file')
+        >>> print b.rating_file
+        some/rating_file
+        '''
         self.rating_file = rating_file
         self.usr2labels_file = usr2labels_file
         self.sub = sub  # Subtitle of (rating_file, usr2labels_file) comb
@@ -20,21 +25,23 @@ class Baseloader(object):
         self.MOMENTUM = 2.0
         self.LAMBDA = 1E-3
 
-    # Get description of loaded data
+    # Get additional description of loaded data
     def getDataSub(self):
         return self.sub
 
-    # All rating files have the same format
-    #  ind2itemNum = {
-    #    0: 5566,
-    #    1: 87,
-    #    2: 2266,
-    #  }
-    #  usr2itemsIndx = {
-    #    0: [0,1],
-    #    1: [1,2],
-    #  }
     def load(self):
+        '''All rating files have the same format
+        return usr2itemsIndx, ind2ItemNum
+        ind2itemNum = {
+          0: 5566,
+          1: 87,
+          2: 2266,
+        }
+        usr2itemsIndx = {
+          0: [0,1],
+          1: [1,2],
+        }
+        '''
         usr2itemsIndx = {}
         itemsList = []
         f = open(self.rating_file, 'r')
@@ -62,17 +69,18 @@ class Baseloader(object):
         logging.info('usr2itemsIndx loaded')
         return usr2itemsIndx, ind2ItemNum
 
-    # Return each usr's labels/nonzeroCols from 'usrs'
-    # sample:
-    # usr2labels = {
-    #   0: [0,0,1, 1,0],
-    #   1: [1,0,0, 0,1],
-    # }
-    # usr2NonzeroCols = {
-    #   0: [2, 3],
-    #   1: [0, 4],
-    # }
     def get_labels(self, usrs):
+        '''Return each usr's labels/nonzeroCols from 'usrs'
+        return usr2labels, usr2nonZeroCols
+        usr2labels = {
+          0: [0,0,1, 1,0],
+          1: [1,0,0, 0,1],
+        }
+        usr2NonzeroCols = {
+          0: [2, 3],
+          1: [0, 4],
+        }
+        '''
         usr2labels = {}
         usr2nonZeroCols = {}
         fd = open(self.usr2labels_file, 'r')
@@ -102,8 +110,8 @@ class Baseloader(object):
         )
 
     def __str__(self):
-        s = "Load BOI from '{}'\n" + \
-            "Load one-hot-encoded attributes from '{}'"
+        s = "Aim to load BOI from '{}'\n" + \
+            "Aim to load one-hot-encoded attributes from '{}'"
         return s.format(self.rating_file, self.usr2labels_file)
 
     def getTrainingConf(self):
@@ -113,3 +121,8 @@ class Baseloader(object):
             self.LEARNING_RATE, \
             self.MOMENTUM, \
             self.LAMBDA
+
+
+if __name__ == '__main__':
+    import doctest
+    doctest.testmod()
