@@ -93,21 +93,20 @@ def sumOverW(W, y):
     return Wn.sum(axis=1)
 
 
-# Get microF1
-#   - see ref
-# ref (how to cal micro1): http://rushdishams.blogspot.tw/2011/08/micro-and-macro-average-of-precision.html
 def getMicroF1ByCol(args):
-    usr2itemsIndx = args['usr2itemsIndx']
+    '''Get microF1
+    ref: http://rushdishams.blogspot.tw/2011/08/micro-and-macro-average-of-precision.html
+    '''
     usr2NonzeroCols = args['usr2NonzeroCols']
     u2predictions = args['u2predictions']
     totalLabelsNum = args['totalLabelsNum']
 
-    # return {
-    #  0: tp list(of cols)
-    #  1: fp list(of cols)
-    #  2: tn list(of cols)
-    # }
     def getClasses(trueCols, predictedCols):
+        # return {
+        #  0: tp list(of cols)
+        #  1: fp list(of cols)
+        #  2: tn list(of cols)
+        # }
         classDict = {
           0: [],
           1: [],
@@ -126,7 +125,7 @@ def getMicroF1ByCol(args):
     tpList = [0.0] * totalLabelsNum
     fpList = [0.0] * totalLabelsNum
     tnList = [0.0] * totalLabelsNum
-    for usrid in usr2itemsIndx:
+    for usrid in u2predictions:
         y_nonzeroCols = usr2NonzeroCols[usrid]
         bestCols = u2predictions[usrid]
 
@@ -152,16 +151,16 @@ def getMicroF1ByCol(args):
     return microF1
 
 
-# Get one error
-#   - sum( has one class hits or not ) / dataPointsNum
 def getOneError(args):
-    usr2itemsIndx = args['usr2itemsIndx']
+    '''Get one error
+    sum( has one class hits or not ) / dataPointsNum
+    '''
     usr2NonzeroCols = args['usr2NonzeroCols']
     u2predictions = args['u2predictions']
 
-    errCnt = len(usr2itemsIndx)
-    usrCnt = len(usr2itemsIndx)
-    for usrid in usr2itemsIndx:
+    errCnt = len(u2predictions)
+    usrCnt = len(u2predictions)
+    for usrid in u2predictions:
         y_nonzeroCols = usr2NonzeroCols[usrid]
         bestCols = u2predictions[usrid]
         for ind, col in enumerate(bestCols):
@@ -172,18 +171,22 @@ def getOneError(args):
     return errCnt / float(usrCnt)
 
 
-# Get RL (ranking loss)
-#   - examine each (0,1) pair's order in its corresponding sorted(by prob) in prediction
-'''
-Notice for 'sort by probability's adaptation in SNE:
-  Example 0 1 | 1 0 0:   prob pos(1) >= prob pos(0); prob pos(2) >= prob pos(3), prob pos(2) >= prob pos(4),
-    - pos 0 1   2 3 4
-  Since no further knowledge given, so 'sort by prob' would just render (by stable sort):
-    - 1 1 0 0 0
-    - 1 2 0 3 4 (pos)
-'''
 def getRL(args):
-    usr2itemsIndx = args['usr2itemsIndx']
+    '''Get RL (ranking loss)
+    examine each (0,1) pair's order in the sorted cols in prediction (by prob)
+
+    Notice for 'sort by probability's adaptation in SNE:
+        Example 0 1 | 1 0 0:
+           (pos 0 1   2 3 4)
+            we can assert at most:
+            prob pos(1) >= prob pos(0)
+            prob pos(2) >= prob pos(3)
+            prob pos(2) >= prob pos(4)
+        Since no further knowledge, so 'sort by prob' renders:
+            (by stable sort)
+            1 1 0 0 0
+            1 2 0 3 4 (pos)
+    '''
     usr2NonzeroCols = args['usr2NonzeroCols']
     u2predictions = args['u2predictions']
     totalLabelsNum = args['totalLabelsNum']
@@ -191,7 +194,7 @@ def getRL(args):
 
     totalLoss = 0.0
     rlPairsCnt = float(rlPairsCnt)
-    for usrid in usr2itemsIndx:
+    for usrid in u2predictions:
         bestCols = u2predictions[usrid]
         y_nonzeroCols = usr2NonzeroCols[usrid]
 
@@ -217,21 +220,15 @@ def getRL(args):
         lossPerUsr = errCnt / rlPairsCnt
         totalLoss += lossPerUsr
 
-    return totalLoss / len(usr2itemsIndx)
+    return totalLoss / len(u2predictions)
 
 
-# Get coverage
-#   - find the last one's position (ranked by predicted probability)
-'''
-Notice for 'sort by probability's adaptation in SNE:
-  Example 0 1 | 1 0 0:   prob pos(1) >= prob pos(0); prob pos(2) >= prob pos(3), prob pos(2) >= prob pos(4),
-    - pos 0 1   2 3 4
-  Since no further knowledge given, so 'sort by prob' would just render (by stable sort):
-    - 1 1 0 0 0
-    - 1 2 0 3 4 (pos)
-'''
 def getCoverage(args):
-    usr2itemsIndx = args['usr2itemsIndx']
+    '''Get coverage
+    find the last one's position (ranked by predicted probability)
+
+    Similar notice here as in getRL
+    '''
     usr2NonzeroCols = args['usr2NonzeroCols']
     u2predictions = args['u2predictions']
     totalLabelsNum = args['totalLabelsNum']
@@ -239,7 +236,7 @@ def getCoverage(args):
     totalFields = 1.0 * totalLabelsNum
     colNums = len(next(usr2NonzeroCols.itervalues()))
     loss = 0.0
-    for usrid in usr2itemsIndx:
+    for usrid in u2predictions:
         y_nonzeroCols = usr2NonzeroCols[usrid]
         bestCols = u2predictions[usrid]
 
@@ -256,26 +253,20 @@ def getCoverage(args):
 
         loss += lowestOneRank / totalFields
 
-    return loss / len(usr2itemsIndx)
+    return loss / len(u2predictions)
 
 
-# Get average precision
-'''
-Notice for 'sort by probability's adaptation in SNE:
-  Example 0 1 | 1 0 0:   prob pos(1) >= prob pos(0); prob pos(2) >= prob pos(3), prob pos(2) >= prob pos(4),
-    - pos 0 1   2 3 4
-  Since no further knowledge given, so 'sort by prob' would just render (by stable sort):
-    - 1 1 0 0 0
-    - 1 2 0 3 4 (pos)
-'''
 def getAvgPrecision(args):
-    usr2itemsIndx = args['usr2itemsIndx']
+    '''Get average precision
+
+    Similar notice here as in getRL
+    '''
     usr2NonzeroCols = args['usr2NonzeroCols']
     u2predictions = args['u2predictions']
 
     colNums = len(next(usr2NonzeroCols.itervalues()))
     prec = 0.0
-    for usrid in usr2itemsIndx:
+    for usrid in u2predictions:
         y_nonzeroCols = usr2NonzeroCols[usrid]
         bestCols = u2predictions[usrid]
 
@@ -298,24 +289,24 @@ def getAvgPrecision(args):
 
         prec += score / colNums
 
-    return prec / len(usr2itemsIndx)
+    return prec / len(u2predictions)
 
 
-# Get hamming loss
-#   - explain by an example
-'''
-Example 0 1 | 1 0 0:  pred
-        1 0 | 0 1 0:  real
-We use pred XOR (by attribute) real; thus, hamming loss for this is 2/2
-'''
 def getHammingLoss(args):
-    usr2itemsIndx = args['usr2itemsIndx']
+    '''Get hamming loss
+    explain by an example
+
+    Example 0 1 | 1 0 0:  pred
+            1 0 | 0 1 0:  real
+    We use pred XOR (by attribute) real
+    Thus, hamming loss for this case is 2/2
+    '''
     usr2NonzeroCols = args['usr2NonzeroCols']
     u2predictions = args['u2predictions']
 
     colNums = len(next(usr2NonzeroCols.itervalues()))
     loss = 0.0
-    for usrid in usr2itemsIndx:
+    for usrid in u2predictions:
         y_nonzeroCols = usr2NonzeroCols[usrid]
         bestCols = u2predictions[usrid]
 
@@ -325,4 +316,9 @@ def getHammingLoss(args):
                 dataPointLoss += 1.0
 
         loss += dataPointLoss / colNums
-    return loss / len(usr2itemsIndx)
+    return loss / len(u2predictions)
+
+
+if __name__ == '__main__':
+    import doctest
+    doctest.testmod()
