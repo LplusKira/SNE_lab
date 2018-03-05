@@ -3,3 +3,6 @@
 report/*
 data/*
 .DS_Store
+MANIFEST
+build/*
+dist/*
