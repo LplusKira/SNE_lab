@@ -8,7 +8,7 @@ setup(
         "SNE_lab.statevalidators",
         "SNE_lab.updator"
     ],
-    version='0.1.3',
+    version='0.1.4',
     description='Structured Neural Embedding model for research',
     url='https://github.com/LplusKira/SNE_lab',
     author='Po-Kai Chang',

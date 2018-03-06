@@ -68,7 +68,7 @@ def main(argv):
         **dict(arg.split('=') for arg in argv[4:]))
     if rating_file and usr2labels_file:
         dataloader = DATA2LOADER[dataset](
-            ratig_file=rating_file,
+            rating_file=rating_file,
             usr2labels_file=usr2labels_file,
             sub=subtitle,
         )
