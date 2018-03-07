@@ -100,11 +100,13 @@ Will record statistics (rawFile) to report/ and log current status to stdout
 - 'Bot' notification for remanining run time
 
 # Moral:
-- Use built-in module logging
-- Use 'legit' names (e.g. pseudoSigmoid VS sigmoid) 
-- 'Drawbacks' of using environ vars to pass arguments (e.g. when examine process from sys command)
-- 'Never' push data/report/something huge
-- Use linting as early as possible
+- __Development Environment__: Use linting as early as possible
+- __Architecture Design__: Associate, automatically, a training config with each trainning result
+- __Architecture Design__: Encapsulate main model into one module
+- __Architecture/Code Design__: 'Drawbacks' of using environ vars to pass arguments (e.g. when examine process from sys command)
+- __Code Design__: Use built-in module logging
+- __Repo/Git Management__: 'Never' push data/report/something huge
+- __Convention__: Use 'legit' names (e.g. pseudoSigmoid VS sigmoid) 
 
 # TL;DR:
 - Try this simple one first: Will generate __10Fml-100k__ under report/
